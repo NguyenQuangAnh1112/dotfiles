@@ -27,7 +27,24 @@ Broken links that were not recreated automatically:
 - `~/.config/bat/config`
 - `~/.config/lazygit/config.yml`
 
-Once GNU Stow is installed:
+Quick start on a new machine:
+
+```bash
+git clone https://github.com/NguyenQuangAnh1112/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+./bootstrap.sh
+```
+
+`bootstrap.sh` will:
+- install GNU Stow when a supported package manager is available
+- run a dry-run first to catch conflicts safely
+- restow all managed packages into `$HOME`
+
+Useful flags:
+- `./bootstrap.sh --yes`: skip the install confirmation prompt
+- `./bootstrap.sh --skip-install`: fail instead of trying to install GNU Stow
+
+If you prefer to run Stow manually:
 
 ```bash
 cd ~/dotfiles
