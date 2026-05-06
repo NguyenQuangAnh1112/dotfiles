@@ -1,0 +1,157 @@
+set $mod Mod4
+set $x11 env XDG_SESSION_TYPE=x11
+font pango:monospace 10
+
+# viền cửa sổ: chỉ hiện khi có nhiều cửa sổ (split)
+default_border none
+default_floating_border none
+smart_borders on
+hide_edge_borders smart
+
+# autostart (QUAN TRỌNG)
+exec_always --no-startup-id dbus-update-activation-environment --systemd DISPLAY XAUTHORITY XDG_SESSION_TYPE=x11 XDG_CURRENT_DESKTOP=i3 DESKTOP_SESSION=i3 XDG_SESSION_DESKTOP=i3
+exec --no-startup-id $x11 picom --config ~/.config/picom/picom.conf -b
+exec_always --no-startup-id $x11 xrdb -merge ~/.Xresources
+exec_always --no-startup-id $x11 fcitx5
+exec_always --no-startup-id $x11 /home/muggle/.config/i3/monitor-layout.sh
+exec_always --no-startup-id $x11 copyq
+
+# đảo chiều lăn chuột (dọc)
+exec_always --no-startup-id $x11 xmodmap -e 'pointer = 1 2 3 5 4 6 7 8 9 10 11 12'
+
+# đảo chiều cuộn touchpad (natural scrolling)
+exec_always --no-startup-id $x11 sh -c 'XINPUT="$HOME/.local/opt/xorg-xinput/usr/bin/xinput"; if [ -x "$XINPUT" ]; then for id in $($XINPUT list | sed -n "s/.*[Tt]ouch[Pp]ad.*id=\([0-9]\+\).*/\1/p"); do $XINPUT set-prop "$id" "libinput Natural Scrolling Enabled" 1 >/dev/null 2>&1; done; fi'
+
+# terminal
+bindsym $mod+Shift+Return exec --no-startup-id $x11 ghostty
+bindsym $mod+Return exec --no-startup-id env XDG_SESSION_TYPE=x11 GLFW_IM_MODULE=ibus kitty
+
+# launcher
+bindsym $mod+d exec --no-startup-id $x11 rofi -show drun
+bindsym Mod1+space exec --no-startup-id $x11 rofi -show drun-frecency -modi "drun-frecency:/home/muggle/.config/rofi/scripts/drun-frecency" -show-icons true
+bindsym Mod1+r exec --no-startup-id $x11 rofi -show run
+
+# screenshot (chọn vùng)
+bindsym $mod+Shift+s exec --no-startup-id $x11 flameshot gui -c
+
+# đóng app
+bindsym $mod+q kill
+
+# di chuyển focus
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+
+# layout / chế độ cửa sổ
+bindsym $mod+m layout tabbed, border none
+bindsym $mod+minus layout stacking, border none
+bindsym $mod+backslash layout toggle split, border none
+bindsym $mod+e exec --no-startup-id $x11 nautilus
+bindsym $mod+f exec --no-startup-id $x11 firefox
+bindsym $mod+Shift+f fullscreen toggle
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+space exec --no-startup-id /home/muggle/.config/i3/swap-panes.sh
+
+# resize mode
+mode "resize" {
+    bindsym h resize shrink width 10 px or 10 ppt
+    bindsym j resize grow height 10 px or 10 ppt
+    bindsym k resize shrink height 10 px or 10 ppt
+    bindsym l resize grow width 10 px or 10 ppt
+    bindsym Left resize shrink width 10 px or 10 ppt
+    bindsym Down resize grow height 10 px or 10 ppt
+    bindsym Up resize shrink height 10 px or 10 ppt
+    bindsym Right resize grow width 10 px or 10 ppt
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
+
+# workspace
+workspace 1 output eDP-1
+workspace 2 output eDP-1
+workspace 3 output eDP-1
+workspace 4 output eDP-1
+workspace 5 output eDP-1
+workspace 6 output eDP-1
+workspace 7 output eDP-1
+workspace 8 output eDP-1
+workspace 9 output eDP-1
+workspace 10 output eDP-1
+
+bindsym $mod+1 focus output eDP-1; workspace number 1
+bindsym $mod+2 focus output eDP-1; workspace number 2
+bindsym $mod+3 focus output eDP-1; workspace number 3
+bindsym $mod+4 focus output eDP-1; workspace number 4
+bindsym $mod+5 focus output eDP-1; workspace number 5
+bindsym $mod+6 focus output eDP-1; workspace number 6
+bindsym $mod+7 focus output eDP-1; workspace number 7
+bindsym $mod+8 focus output eDP-1; workspace number 8
+bindsym $mod+9 focus output eDP-1; workspace number 9
+bindsym $mod+0 focus output eDP-1; workspace number 10
+
+# đổi workspace nhanh
+bindsym $mod+Control+Right workspace next_on_output
+bindsym $mod+Control+Left workspace prev_on_output
+
+# focus/manipulate output
+bindsym $mod+Tab focus output right
+bindsym $mod+Shift+Tab focus output left
+bindsym $mod+Shift+h move container to output left
+bindsym $mod+Shift+l move container to output right
+bindsym $mod+Shift+Left move container to output left
+bindsym $mod+Shift+Right move container to output right
+bindsym $mod+Shift+Up move container to output up
+bindsym $mod+Shift+Down move container to output down
+bindsym $mod+Control+h move workspace to output left
+bindsym $mod+Control+l move workspace to output right
+
+# move window
+bindsym $mod+Shift+1 move container to workspace 1
+bindsym $mod+Shift+2 move container to workspace 2
+bindsym $mod+Shift+3 move container to workspace 3
+bindsym $mod+Shift+4 move container to workspace 4
+bindsym $mod+Shift+5 move container to workspace 5
+bindsym $mod+Shift+6 move container to workspace 6
+bindsym $mod+Shift+7 move container to workspace 7
+bindsym $mod+Shift+8 move container to workspace 8
+bindsym $mod+Shift+9 move container to workspace 9
+bindsym $mod+Shift+0 move container to workspace 10
+
+# system
+bindsym $mod+Shift+x exec --no-startup-id "i3-nagbar -t warning -m 'Khoa man hinh?' -B 'Khoa' 'i3lock -c 000000'"
+bindsym $mod+Shift+e exec --no-startup-id "i3-nagbar -t warning -m 'Thoat i3 session?' -B 'Dang xuat' 'i3-msg exit'"
+bindsym $mod+Shift+z exec --no-startup-id "i3-nagbar -t warning -m 'Tam dung may?' -B 'Sleep' 'systemctl suspend'"
+
+# media
+bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle
+bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOURCE@ toggle
+bindsym XF86MonBrightnessUp exec --no-startup-id brightnessctl set +10%
+bindsym XF86MonBrightnessDown exec --no-startup-id brightnessctl set 10%-
+
+# mod + arrow: volume/brightness
+bindsym $mod+Up exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym $mod+Down exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym $mod+Right exec --no-startup-id brightnessctl set +10%
+bindsym $mod+Left exec --no-startup-id brightnessctl set 10%-
+
+# reload / restart
+bindsym $mod+Shift+r exec --no-startup-id "i3-nagbar -t warning -m 'Khoi dong lai i3?' -B 'Restart' 'i3-msg restart'"
+bindsym $mod+Shift+c exec --no-startup-id "i3-nagbar -t warning -m 'Nap lai config i3?' -B 'Reload' 'i3-msg reload'"
+
+# toggle ẩn/hiện i3 bar
+bindsym Control+Mod1+$mod+b bar mode toggle
+
+# copyq
+bindsym $mod+v exec --no-startup-id $x11 copyq show
+
+# bar
+bar {
+    output primary
+    status_command i3status
+    bindsym button4 nop
+    bindsym button5 nop
+}

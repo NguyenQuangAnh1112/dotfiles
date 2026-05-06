@@ -1,0 +1,43 @@
+# OS and editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.tmp
+*.bak
+
+# Logs
+*.log
+npm-debug.log*
+yarn-*.log*
+pnpm-debug.log*
+
+# Caches and generated files
+.cache/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+dist/
+build/
+
+# Local package/build outputs
+*.pkg.tar.*
+*.tar.gz
+
+# Secrets and machine-local state
+.env
+.env.*
+*.local
+*.secret
+*.secrets
+**/.config/gh/hosts.yml
+**/.config/rclone/rclone.conf
+**/.gnupg/
+**/.ssh/id_*
+**/.ssh/known_hosts

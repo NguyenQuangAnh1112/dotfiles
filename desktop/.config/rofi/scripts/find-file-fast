@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if ! command -v fd >/dev/null 2>&1; then
+  notify-send "Rofi file search" "fd is not installed"
+  exit 1
+fi
+
+selection="$(fd --type f --hidden --follow --exclude .git --exclude node_modules --exclude .cache --exclude target --exclude dist . "$HOME" | rofi -dmenu -i -p "Find file")"
+
+if [[ -z "$selection" ]]; then
+  exit 0
+fi
+
+if command -v xdg-open >/dev/null 2>&1; then
+  xdg-open "$selection" >/dev/null 2>&1 &
+else
+  notify-send "Rofi file search" "$selection"
+fi

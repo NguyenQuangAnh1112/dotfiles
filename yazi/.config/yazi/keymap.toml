@@ -1,0 +1,27 @@
+[mgr]
+prepend_keymap = [
+  { on = "h", run = "leave", desc = "Go to parent" },
+  { on = "l", run = "enter", desc = "Enter directory" },
+  { on = [ "g", "g" ], run = "arrow top", desc = "Go to top" },
+  { on = "G", run = "arrow bot", desc = "Go to bottom" },
+  { on = [ "y", "y" ], run = "yank", desc = "Yank selected" },
+  { on = [ "d", "d" ], run = "remove", desc = "Trash selected" },
+  { on = [ "p", "p" ], run = "paste", desc = "Paste yanked" },
+  { on = "q", run = "quit", desc = "Quit Yazi" },
+
+  { on = "H", run = "hidden toggle", desc = "Toggle hidden files" },
+  { on = "f", run = "find --smart", desc = "Find in directory" },
+  { on = "F", run = "filter --smart", desc = "Filter entries" },
+  { on = "O", run = "open --hovered", desc = "Open hovered file" },
+  { on = "o", run = "open --interactive", desc = "Open with..." },
+
+  { on = [ "g", "c" ], run = "cd ~/.config", desc = "Go config" },
+  { on = [ "g", "d" ], run = "cd ~/Downloads", desc = "Go downloads" },
+  { on = [ "g", "o" ], run = "cd /home/muggle/hlt/obsidian/Para", desc = "Go Obsidian Para" },
+  { on = [ "g", "p" ], run = "cd /home/muggle/hlt/py/my-project", desc = "Go my project" },
+  { on = [ "g", "h" ], run = "cd /home/muggle/hlt", desc = "Go hlt" },
+
+  { on = [ ",", "m" ], run = "sort mtime", desc = "Sort by mtime" },
+  { on = [ ",", "n" ], run = "sort natural", desc = "Sort naturally" },
+  { on = [ ",", "s" ], run = "sort size", desc = "Sort by size" },
+]

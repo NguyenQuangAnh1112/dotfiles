@@ -1,0 +1,7 @@
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
+# GDM can mislabel the i3 Xorg session as Wayland.
+export XDG_SESSION_TYPE=x11
+export XCURSOR_THEME=Bibata-Modern-Ice
+export XCURSOR_SIZE=32

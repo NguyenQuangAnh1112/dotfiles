@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+
+import hashlib
+import json
+import os
+import shlex
+import subprocess
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+
+HOME = Path.home()
+APP_DIRS = [HOME / ".local/share/applications", Path("/usr/share/applications")]
+STATE_PATH = HOME / ".cache/rofi-drun-frecency.json"
+
+
+@dataclass
+class AppEntry:
+    key: str
+    name: str
+    exec_cmd: str
+    icon: str
+
+
+def read_state() -> dict:
+    try:
+        with STATE_PATH.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                return data
+    except Exception:
+        pass
+    return {}
+
+
+def write_state(state: dict) -> None:
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with STATE_PATH.open("w", encoding="utf-8") as f:
+        json.dump(state, f)
+
+
+def parse_desktop_file(path: Path) -> tuple[str, str, str] | None:
+    name = ""
+    localized_name = ""
+    exec_cmd = ""
+    icon = ""
+    in_entry = False
+
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return None
+
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+
+        if line.startswith("[") and line.endswith("]"):
+            in_entry = line == "[Desktop Entry]"
+            continue
+
+        if not in_entry or "=" not in line:
+            continue
+
+        k, v = line.split("=", 1)
+        k = k.strip()
+        v = v.strip()
+
+        if k == "NoDisplay" and v.lower() == "true":
+            return None
+        if k == "Hidden" and v.lower() == "true":
+            return None
+        if k == "Name":
+            name = v
+        elif k.startswith("Name[") and not name and not localized_name:
+            localized_name = v
+        elif k == "Exec":
+            exec_cmd = v
+        elif k == "Icon":
+            icon = v
+
+    final_name = name or localized_name
+    if not final_name or not exec_cmd:
+        return None
+    return final_name, exec_cmd, icon
+
+
+def desktop_key(path: Path) -> str:
+    app_id = path.name.removesuffix(".desktop")
+    digest = hashlib.sha1(str(path).encode("utf-8")).hexdigest()[:8]
+    return f"{app_id}:{digest}"
+
+
+def load_apps() -> list[AppEntry]:
+    entries: list[AppEntry] = []
+    seen = set()
+
+    for app_dir in APP_DIRS:
+        if not app_dir.exists():
+            continue
+        for p in app_dir.glob("*.desktop"):
+            parsed = parse_desktop_file(p)
+            if not parsed:
+                continue
+            name, exec_cmd, icon = parsed
+            dedupe_key = (name, exec_cmd)
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            entries.append(AppEntry(key=desktop_key(p), name=name, exec_cmd=exec_cmd, icon=icon))
+
+    return entries
+
+
+def clean_exec(exec_cmd: str) -> list[str]:
+    parts = shlex.split(exec_cmd)
+    cleaned = []
+    for token in parts:
+        if token.startswith("%"):
+            continue
+        cleaned.append(token.replace("%%", "%"))
+    return cleaned
+
+
+def score_for(key: str, state: dict, now: float) -> float:
+    item = state.get(key, {})
+    count = float(item.get("count", 0))
+    last_used = float(item.get("last_used", 0))
+    if last_used <= 0:
+        return count
+    days = max(0.0, (now - last_used) / 86400.0)
+    recency = 50.0 / (1.0 + days)
+    return count + recency
+
+
+def show_menu() -> None:
+    now = time.time()
+    state = read_state()
+    apps = load_apps()
+
+    apps.sort(key=lambda a: (-score_for(a.key, state, now), a.name.lower()))
+
+    print("\0prompt\x1fApplications")
+    print("\0message\x1fSorted by usage + recency")
+    for app in apps:
+        if app.icon:
+            print(f"{app.name}{chr(0)}icon\x1f{app.icon}\x1finfo\x1f{app.key}")
+        else:
+            print(f"{app.name}{chr(0)}info\x1f{app.key}")
+
+
+def launch_selected(key: str) -> None:
+    apps = load_apps()
+    app = next((a for a in apps if a.key == key), None)
+    if not app:
+        return
+
+    cmd = clean_exec(app.exec_cmd)
+    if not cmd:
+        return
+
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    except Exception:
+        subprocess.run(["notify-send", "Rofi", f"Failed to launch: {app.name}"], check=False)
+        return
+
+    now = time.time()
+    state = read_state()
+    item = state.get(key, {"count": 0, "last_used": 0})
+    item["count"] = int(item.get("count", 0)) + 1
+    item["last_used"] = now
+    state[key] = item
+    write_state(state)
+
+
+if __name__ == "__main__":
+    retv = int(os.environ.get("ROFI_RETV", "0"))
+    selected_key = os.environ.get("ROFI_INFO", "")
+
+    if retv == 1 and selected_key:
+        launch_selected(selected_key)
+    else:
+        show_menu()

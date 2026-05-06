@@ -1,0 +1,31 @@
+(defcfg
+  process-unmapped-keys no
+)
+
+(defalias
+  nav (layer-while-held nav)
+)
+
+(defsrc
+  esc tab caps ralt lalt
+  a c d e f
+  u i o p
+  h j k l ; '
+  n m , . /
+)
+
+(deflayer base
+  _ _ @nav ralt lalt
+  _ _ _ _ _
+  _ _ _ _
+  _ _ _ _ _ _
+  _ _ _ _ _
+)
+
+(deflayer nav
+  _ _ _ _ _
+  end caps del ret f11
+  esc home _ _
+  left down up rght _ _
+  mlft mrgt S-tab tab _
+)
