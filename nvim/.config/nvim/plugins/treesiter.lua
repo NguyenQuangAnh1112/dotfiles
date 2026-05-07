@@ -5,7 +5,17 @@ return {
     build = ":TSUpdate",
     config = function()
       local ts = require("nvim-treesitter")
-      local languages = { "lua", "vim", "vimdoc", "python", "markdown", "markdown_inline" }
+      local languages = {
+        "gdscript",
+        "gdshader",
+        "godot_resource",
+        "lua",
+        "vim",
+        "vimdoc",
+        "python",
+        "markdown",
+        "markdown_inline",
+      }
 
       ts.setup()
 
@@ -14,7 +24,16 @@ return {
       end
 
       vim.api.nvim_create_autocmd("FileType", {
-        pattern = { "lua", "python", "vim", "help", "markdown" },
+        pattern = {
+          "gdscript",
+          "gdshader",
+          "gdresource",
+          "lua",
+          "python",
+          "vim",
+          "help",
+          "markdown",
+        },
         callback = function(args)
           pcall(vim.treesitter.start, args.buf)
 

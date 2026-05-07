@@ -2,6 +2,12 @@ local keymap = vim.keymap.set
 
 local diagnostics_float_win
 
+local godot_filetypes = {
+	gdresource = true,
+	gdscript = true,
+	gdshader = true,
+}
+
 local function find_available_executable(candidates)
 	for _, candidate in ipairs(candidates) do
 		if vim.fn.executable(candidate) == 1 then
@@ -39,6 +45,13 @@ local function find_love_project_root(file_dir)
 		end
 	end
 	return nil
+end
+
+local function find_godot_project_root(file_dir)
+	local project_paths = vim.fs.find("project.godot", { path = file_dir, upward = true, type = "file" })
+	if project_paths[1] then
+		return vim.fs.dirname(project_paths[1])
+	end
 end
 
 local function open_command_in_new_tab(command, cwd)
@@ -113,6 +126,26 @@ local function run_current_file_in_new_tab()
 	end
 
 	local file_dir = vim.fn.fnamemodify(file_path, ":h")
+	if godot_filetypes[vim.bo.filetype] then
+		local godot_project_root = find_godot_project_root(file_dir)
+		if not godot_project_root then
+			vim.notify("Could not find project.godot", vim.log.levels.ERROR)
+			return
+		end
+
+		local godot_executable = find_available_executable({ "godot", "godot4" })
+		if not godot_executable then
+			vim.notify("Could not find 'godot' or 'godot4' executable", vim.log.levels.ERROR)
+			return
+		end
+
+		open_command_in_new_tab(
+			("%s --path %s"):format(vim.fn.shellescape(godot_executable), vim.fn.shellescape(godot_project_root)),
+			godot_project_root
+		)
+		return
+	end
+
 	if vim.bo.filetype == "lua" then
 		local love_project_root = find_love_project_root(file_dir)
 		if love_project_root then
@@ -145,7 +178,10 @@ local function run_current_file_in_new_tab()
 		return
 	end
 
-	open_command_in_new_tab(("%s run %s"):format(vim.fn.shellescape(uv_executable), vim.fn.shellescape(file_path)), file_dir)
+	open_command_in_new_tab(
+		("%s run %s"):format(vim.fn.shellescape(uv_executable), vim.fn.shellescape(file_path)),
+		file_dir
+	)
 end
 
 local function toggle_markdown_checkbox()
