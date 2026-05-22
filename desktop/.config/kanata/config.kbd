@@ -8,24 +8,34 @@
 
 (defsrc
   esc tab caps ralt lalt
+  1 2 3 4 5 6 7 8 9 0 - =
   a c d e f
   u i o p
   h j k l ; '
   n m , . /
+  lctl spc
 )
 
 (deflayer base
-  _ _ @nav ralt lalt
+  _ _ lctl ralt lalt
+  _ _ _ _ _ _ _ _ _ _ _ _
   _ _ _ _ _
   _ _ _ _
   _ _ _ _ _ _
   _ _ _ _ _
+  @nav spc
 )
 
 (deflayer nav
   _ _ _ _ _
+  f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12
   end caps del ret f11
   esc home _ _
   left down up rght _ _
   mlft mrgt S-tab tab _
+  lctl M-spc
+)
+
+(defoverrides
+  (lctl spc) (lmet spc)
 )
