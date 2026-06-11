@@ -4,38 +4,30 @@
 
 (defalias
   nav (layer-while-held nav)
+  cap (macro caps)
 )
 
 (defsrc
-  esc tab caps ralt lalt
-  1 2 3 4 5 6 7 8 9 0 - =
-  a c d e f
-  u i o p
-  h j k l ; '
-  n m , . /
-  lctl spc
+  esc 1 2 3 4 5 6 7 8 9 0 - = bspc
+  tab q w e r t y u i o p [ ]
+  caps a s d f g h j k l ; ' ret
+  lalt spc ralt
+  z x c v b n m , . /
 )
 
 (deflayer base
-  _ _ lctl ralt lalt
-  _ _ _ _ _ _ _ _ _ _ _ _
-  _ _ _ _ _
-  _ _ _ _
-  _ _ _ _ _ _
-  _ _ _ _ _
-  @nav spc
+  _ _ _ _ _ _ _ _ _ _ _ _ _ _
+  _ _ _ _ _ _ _ _ _ _ _ _ _
+  @nav _ _ _ _ _ _ _ _ _ _ _ _
+  lalt _ ralt
+  _ _ _ _ _ _ _ _ _ _
 )
 
 (deflayer nav
-  _ _ _ _ _
-  f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12
-  end caps del ret f11
-  esc home _ _
-  left down up rght _ _
-  mlft mrgt S-tab tab _
-  lctl M-spc
+  _ f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 _
+  _ _ _ ret _ _ _ esc home _ bspc _ _
+  _ end _ del f11 _ left down up rght ret _ ret
+  lalt _ ralt
+  _ _ @cap _ _ [ { _ _ _
 )
 
-(defoverrides
-  (lctl spc) (lmet spc)
-)
