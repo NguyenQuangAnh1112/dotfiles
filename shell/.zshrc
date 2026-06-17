@@ -68,6 +68,7 @@ if [[ -o interactive ]]; then
   alias cat='bat --paging=never'
 
   alias v='nvim'
+  alias 'v.'='nvim -c Oil'
 
   alias e="exit"
 
@@ -99,7 +100,7 @@ if [[ -o interactive ]]; then
 
   alias cardoff='sudo nvidia-smi -pm 0'
 
-  alias ud='sudo sudo pacman -Syu'
+  alias ud='sudo dnf update'
 
 fi
 
@@ -215,12 +216,14 @@ export CUDA_HOME=/usr/local/cuda-13.2
 function y() {
   local tmp cwd
   tmp="$(mktemp -t yazi-cwd.XXXXXX)"
-  yazi --cwd-file="$tmp"
-  if cwd="$(command cat "$tmp")" && [ -n "$cwd" ]; then
+  yazi "$@" --cwd-file="$tmp"
+  if cwd="$(command cat "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
     builtin cd -- "$cwd"
   fi
   rm -f -- "$tmp"
 }
+
+alias yy=y
 
 ########################
 # INPUT METHOD (VIETNAMESE)
@@ -236,7 +239,7 @@ export XMODIFIERS=@im=fcitx
 
 DISABLE_AUTO_UPDATE="true"
 
-export BAT_THEME="Rose-Pine"
+export BAT_THEME="Zenbones"
 
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#6e6a86"
 
@@ -257,3 +260,5 @@ export PATH="$HOME/.config/emacs/bin:$PATH"
 
 export PATH=$PATH:$HOME/.local/opt/go/bin
 export PATH=$PATH:$HOME/go/bin
+export PATH=$HOME/.npm-global/bin:$PATH
+export PATH="$HOME/.cargo/bin:$PATH"

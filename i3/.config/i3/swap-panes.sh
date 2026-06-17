@@ -1,40 +1,45 @@
 #!/bin/sh
 
-if ! command -v jq >/dev/null 2>&1; then
-    exit 0
-fi
+python3 - <<'PY'
+import json
+import subprocess
+import sys
 
-tree_json="$(i3-msg -t get_tree)"
+try:
+    tree = json.loads(subprocess.check_output(["i3-msg", "-t", "get_tree"], text=True))
+except Exception:
+    sys.exit(0)
 
-focused_id="$(printf '%s' "$tree_json" | jq -r 'first(.. | objects | select(.focused == true) | .id) // empty')"
+focused_id = None
+pair = None
 
-if [ -z "$focused_id" ]; then
-    exit 0
-fi
+def contains_focused(node):
+    global focused_id, pair
+    if node.get("focused"):
+        focused_id = node.get("id")
+        return True
 
-pair="$(printf '%s' "$tree_json" | jq -r --argjson fid "$focused_id" '
-    first(
-        ..
-        | objects
-        | select((.nodes | type) == "array" and (.nodes | length) == 2)
-        | select(any(.nodes[]; .id == $fid))
-        | [.nodes[0].id, .nodes[1].id]
-        | @tsv
-    ) // empty
-')"
+    child_nodes = node.get("nodes") or []
+    floating_nodes = node.get("floating_nodes") or []
+    focused_in_tiled_child = False
 
-if [ -z "$pair" ]; then
-    exit 0
-fi
+    for child in child_nodes:
+        if contains_focused(child):
+            focused_in_tiled_child = True
 
-tab="$(printf '\t')"
-left_id="${pair%%$tab*}"
-right_id="${pair#*$tab}"
+    for child in floating_nodes:
+        contains_focused(child)
 
-if [ "$left_id" = "$focused_id" ]; then
-    other_id="$right_id"
-else
-    other_id="$left_id"
-fi
+    if focused_in_tiled_child and pair is None and len(child_nodes) == 2:
+        pair = [child.get("id") for child in child_nodes]
 
-i3-msg "[con_id=$focused_id] swap container with con_id $other_id" >/dev/null
+    return focused_in_tiled_child
+
+contains_focused(tree)
+
+if not focused_id or not pair:
+    sys.exit(0)
+
+other_id = pair[1] if pair[0] == focused_id else pair[0]
+subprocess.call(["i3-msg", f"[con_id={focused_id}]", "swap", "container", "with", "con_id", str(other_id)], stdout=subprocess.DEVNULL)
+PY

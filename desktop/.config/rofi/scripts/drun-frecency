@@ -95,12 +95,18 @@ def desktop_key(path: Path) -> str:
 
 def load_apps() -> list[AppEntry]:
     entries: list[AppEntry] = []
+    seen_ids = set()
     seen = set()
 
     for app_dir in APP_DIRS:
         if not app_dir.exists():
             continue
         for p in app_dir.glob("*.desktop"):
+            desktop_id = p.name
+            if desktop_id in seen_ids:
+                continue
+            seen_ids.add(desktop_id)
+
             parsed = parse_desktop_file(p)
             if not parsed:
                 continue

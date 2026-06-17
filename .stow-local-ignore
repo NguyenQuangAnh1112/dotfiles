@@ -1,0 +1,22 @@
+# Generated files and local runtime state should not become managed symlinks.
+(^|/)__pycache__($|/)
+\.pyc$
+\.pyo$
+\.log$
+\.bak$
+\.tmp$
+~$
+
+# Tool-local metadata that may appear inside config directories.
+(^|/)\.git($|/)
+(^|/)\.agents($|/)
+(^|/)\.codex($|/)
+(^|/)\.pi($|/)
+(^|/)\.backups($|/)
+
+# Dependency/cache directories.
+(^|/)node_modules($|/)
+(^|/)\.cache($|/)
+(^|/)\.ruff_cache($|/)
+(^|/)\.mypy_cache($|/)
+(^|/)\.pytest_cache($|/)

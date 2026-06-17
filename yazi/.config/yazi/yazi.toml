@@ -1,16 +1,35 @@
 [mgr]
-ratio = [1, 4, 4]
+ratio = [1, 2, 3]
 sort_by = "natural"
 sort_dir_first = true
 show_hidden = false
 show_symlink = true
-linemode = "mtime"
+linemode = "git"
 scrolloff = 8
 
 [preview]
 wrap = "no"
 tab_size = 2
 image_delay = 80
+max_width = 1200
+max_height = 1800
+
+[plugin]
+prepend_preloaders = [
+  { mime = "image/*", run = "image" },
+  { mime = "video/*", run = "video" },
+  { mime = "application/pdf", run = "pdf" },
+]
+
+[[plugin.prepend_fetchers]]
+url   = "*"
+run   = "git"
+group = "git"
+
+[[plugin.prepend_fetchers]]
+url   = "*/"
+run   = "git"
+group = "git"
 
 [opener]
 edit = [

@@ -1,0 +1,365 @@
+#!/usr/bin/env python3
+
+import hashlib
+import json
+import math
+import os
+import shlex
+import subprocess
+import sys
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+
+HOME = Path.home()
+APP_DIRS = [
+    HOME / ".local/share/applications",
+    Path("/usr/local/share/applications"),
+    Path("/usr/share/applications"),
+]
+STATE_PATH = HOME / ".cache/i3-rofi-drun-smart.json"
+
+PINNED_HINTS = {
+    "kitty": 90,
+    "ghostty": 85,
+    "firefox": 80,
+    "zen": 78,
+    "brave": 76,
+    "chromium": 74,
+    "nautilus": 70,
+    "org.gnome.nautilus": 70,
+    "code": 62,
+    "cursor": 62,
+    "obsidian": 58,
+    "spotify": 48,
+    "discord": 44,
+    "telegram": 42,
+}
+
+CATEGORY_BOOSTS = {
+    "TerminalEmulator": 20,
+    "WebBrowser": 18,
+    "FileManager": 16,
+    "Development": 10,
+    "Office": 5,
+    "Settings": -8,
+    "System": -12,
+}
+
+CHROMIUM_SMOOTH_FLAGS = [
+    "--disable-backgrounding-occluded-windows",
+    "--disable-renderer-backgrounding",
+    "--disable-background-timer-throttling",
+    "--disable-features=CalculateNativeWinOcclusion",
+    "--ignore-gpu-blocklist",
+    "--enable-gpu-rasterization",
+    "--enable-zero-copy",
+]
+
+
+@dataclass(frozen=True)
+class App:
+    key: str
+    desktop_id: str
+    name: str
+    generic_name: str
+    comment: str
+    exec_cmd: str
+    icon: str
+    categories: tuple[str, ...]
+    keywords: tuple[str, ...]
+    startup_wm_class: str
+    terminal: bool
+
+
+def read_state() -> dict:
+    try:
+        with STATE_PATH.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def write_state(state: dict) -> None:
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = STATE_PATH.with_suffix(".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False)
+    tmp.replace(STATE_PATH)
+
+
+def split_list(value: str) -> tuple[str, ...]:
+    return tuple(item for item in value.split(";") if item)
+
+
+def desktop_key(path: Path) -> str:
+    desktop_id = path.name.removesuffix(".desktop")
+    digest = hashlib.sha1(str(path).encode("utf-8")).hexdigest()[:8]
+    return f"{desktop_id}:{digest}"
+
+
+def parse_desktop(path: Path) -> App | None:
+    fields = {
+        "Name": "",
+        "GenericName": "",
+        "Comment": "",
+        "Exec": "",
+        "Icon": "",
+        "Categories": "",
+        "Keywords": "",
+        "StartupWMClass": "",
+        "Terminal": "false",
+        "Type": "",
+    }
+    in_entry = False
+
+    try:
+        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except Exception:
+        return None
+
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            in_entry = line == "[Desktop Entry]"
+            continue
+        if not in_entry or "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+
+        if key == "NoDisplay" and value.lower() == "true":
+            return None
+        if key == "Hidden" and value.lower() == "true":
+            return None
+        if key in fields:
+            fields[key] = value
+
+    if fields["Type"] and fields["Type"] != "Application":
+        return None
+    if not fields["Name"] or not fields["Exec"]:
+        return None
+
+    desktop_id = path.name.removesuffix(".desktop")
+    return App(
+        key=desktop_key(path),
+        desktop_id=desktop_id,
+        name=fields["Name"],
+        generic_name=fields["GenericName"],
+        comment=fields["Comment"],
+        exec_cmd=fields["Exec"],
+        icon=fields["Icon"],
+        categories=split_list(fields["Categories"]),
+        keywords=split_list(fields["Keywords"]),
+        startup_wm_class=fields["StartupWMClass"],
+        terminal=fields["Terminal"].lower() == "true",
+    )
+
+
+def load_apps() -> list[App]:
+    apps: list[App] = []
+    seen_desktop_ids = set()
+    seen_identity = set()
+
+    for app_dir in APP_DIRS:
+        if not app_dir.exists():
+            continue
+        for path in app_dir.rglob("*.desktop"):
+            desktop_id = path.name
+            if desktop_id in seen_desktop_ids:
+                continue
+            seen_desktop_ids.add(desktop_id)
+
+            app = parse_desktop(path)
+            if app is None:
+                continue
+
+            identity = (app.name.casefold(), app.exec_cmd)
+            if identity in seen_identity:
+                continue
+            seen_identity.add(identity)
+            apps.append(app)
+
+    return apps
+
+
+def running_classes() -> set[str]:
+    try:
+        tree = json.loads(
+            subprocess.check_output(
+                ["i3-msg", "-t", "get_tree"],
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+        )
+    except Exception:
+        return set()
+
+    classes = set()
+
+    def walk(node: dict) -> None:
+        props = node.get("window_properties") or {}
+        for key in ("class", "instance"):
+            value = props.get(key)
+            if value:
+                classes.add(str(value).casefold())
+        for child in (node.get("nodes") or []) + (node.get("floating_nodes") or []):
+            walk(child)
+
+    walk(tree)
+    return classes
+
+
+def app_terms(app: App) -> tuple[str, ...]:
+    return tuple(
+        term.casefold()
+        for term in (
+            app.desktop_id,
+            app.name,
+            app.generic_name,
+            app.comment,
+            app.startup_wm_class,
+            *app.keywords,
+        )
+        if term
+    )
+
+
+def hint_score(app: App) -> float:
+    haystack = " ".join(app_terms(app))
+    score = 0.0
+
+    for hint, value in PINNED_HINTS.items():
+        if hint in haystack:
+            score = max(score, float(value))
+
+    for category, value in CATEGORY_BOOSTS.items():
+        if category in app.categories:
+            score += value
+
+    if app.terminal:
+        score -= 20
+
+    return score
+
+
+def usage_score(app: App, state: dict, now: float) -> float:
+    item = state.get(app.key, {})
+    count = max(0, int(item.get("count", 0) or 0))
+    last_used = float(item.get("last_used", 0) or 0)
+
+    count_score = math.log1p(count) * 85.0
+    if last_used <= 0:
+        return count_score
+
+    age_days = max(0.0, (now - last_used) / 86400.0)
+    recency_score = 140.0 * math.exp(-age_days / 14.0)
+    return count_score + recency_score
+
+
+def score(app: App, state: dict, now: float, classes: set[str]) -> float:
+    app_classes = {
+        app.startup_wm_class.casefold(),
+        app.desktop_id.casefold(),
+        app.name.casefold(),
+    }
+    running_boost = 35.0 if app_classes & classes else 0.0
+    return usage_score(app, state, now) + hint_score(app) + running_boost
+
+
+def rofi_row(app: App) -> str:
+    meta = f"info\x1f{app.key}"
+    if app.icon:
+        meta += f"\x1ficon\x1f{app.icon}"
+    return f"{app.name}\0{meta}"
+
+
+def show_menu() -> None:
+    now = time.time()
+    state = read_state()
+    classes = running_classes()
+    apps = load_apps()
+    apps.sort(key=lambda app: (-score(app, state, now, classes), app.name.casefold()))
+
+    print("\0prompt\x1fApplications")
+    print("\0message\x1fFrecency, running apps, and useful defaults")
+    for app in apps:
+        print(rofi_row(app))
+
+
+def clean_exec(exec_cmd: str) -> list[str]:
+    try:
+        parts = shlex.split(exec_cmd)
+    except ValueError:
+        return []
+
+    cleaned = []
+    for token in parts:
+        if token.startswith("%"):
+            continue
+        if "%" in token:
+            token = token.replace("%i", "").replace("%c", "").replace("%k", "")
+            token = token.replace("%f", "").replace("%F", "").replace("%u", "").replace("%U", "")
+        token = token.strip()
+        if token:
+            cleaned.append(token.replace("%%", "%"))
+    return cleaned
+
+
+def launch(app: App) -> bool:
+    cmd = clean_exec(app.exec_cmd)
+    if not cmd:
+        return False
+
+    if Path(cmd[0]).name == "helium":
+        existing = {part.split("=", 1)[0] for part in cmd if part.startswith("--")}
+        cmd.extend(flag for flag in CHROMIUM_SMOOTH_FLAGS if flag.split("=", 1)[0] not in existing)
+
+    if app.terminal:
+        term = os.environ.get("TERMINAL", "kitty")
+        cmd = [term, "-e", *cmd]
+
+    try:
+        subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        return True
+    except Exception:
+        subprocess.run(["notify-send", "Rofi", f"Failed to launch: {app.name}"], check=False)
+        return False
+
+
+def launch_selected(key: str) -> None:
+    apps = load_apps()
+    app = next((candidate for candidate in apps if candidate.key == key), None)
+    if app is None:
+        return
+
+    if not launch(app):
+        return
+
+    now = time.time()
+    state = read_state()
+    item = state.get(app.key, {"count": 0, "last_used": 0})
+    item["count"] = int(item.get("count", 0) or 0) + 1
+    item["last_used"] = now
+    state[app.key] = item
+    write_state(state)
+
+
+def main() -> None:
+    retv = int(os.environ.get("ROFI_RETV", "0") or 0)
+    selected_key = os.environ.get("ROFI_INFO", "")
+
+    if retv == 1 and selected_key:
+        launch_selected(selected_key)
+    else:
+        show_menu()
+
+
+if __name__ == "__main__":
+    main()

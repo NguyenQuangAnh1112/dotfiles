@@ -1,17 +1,19 @@
 [mgr]
 prepend_keymap = [
   { on = "h", run = "leave", desc = "Go to parent" },
-  { on = "l", run = "enter", desc = "Enter directory" },
+  { on = "l", run = "plugin smart-enter", desc = "Smart enter/open" },
   { on = [ "g", "g" ], run = "arrow top", desc = "Go to top" },
   { on = "G", run = "arrow bot", desc = "Go to bottom" },
   { on = [ "y", "y" ], run = "yank", desc = "Yank selected" },
   { on = [ "d", "d" ], run = "remove", desc = "Trash selected" },
   { on = [ "p", "p" ], run = "paste", desc = "Paste yanked" },
-  { on = "q", run = "quit", desc = "Quit Yazi" },
+  { on = "q", run = "plugin save-ratio --args=quit", desc = "Save layout ratio and quit" },
 
   { on = "H", run = "hidden toggle", desc = "Toggle hidden files" },
   { on = "f", run = "find --smart", desc = "Find in directory" },
-  { on = "F", run = "filter --smart", desc = "Filter entries" },
+  { on = "F", run = "plugin smart-filter", desc = "Smart filter" },
+  { on = "s", run = "search --via=fd", desc = "Search files by name" },
+  { on = "S", run = "search --via=rg", desc = "Search files by content" },
   { on = "O", run = "open --hovered", desc = "Open hovered file" },
   { on = "o", run = "open --interactive", desc = "Open with..." },
 
@@ -24,4 +26,10 @@ prepend_keymap = [
   { on = [ ",", "m" ], run = "sort mtime", desc = "Sort by mtime" },
   { on = [ ",", "n" ], run = "sort natural", desc = "Sort naturally" },
   { on = [ ",", "s" ], run = "sort size", desc = "Sort by size" },
+  { on = [ ",", "g" ], run = "linemode git", desc = "Linemode: git status" },
+  { on = [ ",", "t" ], run = "linemode mtime", desc = "Linemode: modified time" },
+  { on = [ ",", "r" ], run = "plugin save-ratio", desc = "Save current layout ratio" },
+  { on = [ "c", "m" ], run = "plugin chmod", desc = "Chmod selected files" },
+  { on = "E", run = 'shell --block "$EDITOR \"$@\""', desc = "Edit selected with $EDITOR" },
+  { on = "T", run = 'shell --confirm "kitty --detach --directory \"$PWD\""', desc = "Open terminal here" },
 ]

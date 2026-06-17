@@ -1,0 +1,54 @@
+general {
+    output_format = "i3bar"
+    colors = true
+    interval = 5
+    color_good = "#8ec07c"
+    color_degraded = "#fabd2f"
+    color_bad = "#fb4934"
+}
+
+order += "wireless _first_"
+order += "ethernet _first_"
+order += "battery all"
+order += "disk /"
+order += "memory"
+order += "load"
+order += "tztime local"
+
+wireless _first_ {
+    format_up = "W: %quality %essid %ip"
+    format_down = "W: down"
+}
+
+ethernet _first_ {
+    format_up = "E: %ip"
+    format_down = "E: down"
+}
+
+battery all {
+    format = "%status %percentage %remaining"
+    format_down = "BAT: n/a"
+    status_chr = "CHR"
+    status_bat = "BAT"
+    status_full = "FULL"
+    low_threshold = 15
+    threshold_type = "percentage"
+}
+
+disk "/" {
+    format = "/: %avail"
+}
+
+memory {
+    format = "RAM: %used/%total"
+    threshold_degraded = "1G"
+    format_degraded = "RAM low: %available"
+}
+
+load {
+    format = "CPU: %1min"
+}
+
+tztime local {
+    format = "%Y-%m-%d %H:%M"
+}
