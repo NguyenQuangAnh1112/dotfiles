@@ -1,3 +1,47 @@
+local function count_path_parts(path)
+  local count = 0
+  for _ in path:gmatch("[^/]+") do
+    count = count + 1
+  end
+  return count
+end
+
+local function get_target_score(target)
+  local dir = vim.fs.dirname(target)
+  local project_name = vim.fs.basename(dir)
+  local target_name = vim.fn.fnamemodify(target, ":t:r")
+  local score = count_path_parts(dir)
+
+  if target_name == project_name then
+    score = score - 100
+  end
+
+  if target:match("%.sln$") then
+    score = score - 30
+  elseif target:match("%.slnx$") then
+    score = score - 20
+  elseif target:match("%.slnf$") then
+    score = score - 10
+  end
+
+  return score
+end
+
+local function choose_roslyn_target(targets)
+  table.sort(targets, function(left, right)
+    local left_score = get_target_score(left)
+    local right_score = get_target_score(right)
+
+    if left_score == right_score then
+      return left < right
+    end
+
+    return left_score < right_score
+  end)
+
+  return targets[1]
+end
+
 return {
   {
     "LuaCATS/love2d",
@@ -5,7 +49,12 @@ return {
   },
   {
     "williamboman/mason.nvim",
-    opts = {},
+    opts = {
+      registries = {
+        "github:mason-org/mason-registry",
+        "github:Crashdummyy/mason-registry",
+      },
+    },
   },
   {
     "williamboman/mason-lspconfig.nvim",
@@ -31,9 +80,20 @@ return {
     opts = {
       ensure_installed = {
         "gdscript-formatter",
+        "roslyn-language-server",
         "ruff",
         "stylua",
       },
+    },
+  },
+  {
+    "seblyng/roslyn.nvim",
+    ft = { "cs" },
+    opts = {
+      filewatching = "roslyn",
+      choose_target = choose_roslyn_target,
+      broad_search = false,
+      lock_target = false,
     },
   },
   {
@@ -159,6 +219,34 @@ return {
       local godot_lsp_addr = ("127.0.0.1:%d"):format(godot_lsp_port)
       local godot_lsp_unavailable_notified = false
 
+      local function get_roslyn_cmd()
+        local dotnet = vim.fn.expand("~/.dotnet/dotnet")
+        if vim.fn.executable(dotnet) == 0 then
+          dotnet = "dotnet"
+        end
+
+        local package_path = vim.fs.joinpath(vim.fn.stdpath("data"), "mason", "packages", "roslyn-language-server")
+        local dlls = vim.fs.find("Microsoft.CodeAnalysis.LanguageServer.dll", {
+          path = package_path,
+          type = "file",
+          limit = 1,
+        })
+
+        if dlls[1] then
+          return {
+            dotnet,
+            dlls[1],
+            "--logLevel",
+            "Information",
+            "--extensionLogDirectory",
+            vim.fs.joinpath(vim.fn.stdpath("cache"), "roslyn_ls", "logs"),
+            "--stdio",
+          }
+        end
+
+        return { "roslyn-language-server", "--stdio" }
+      end
+
       local function is_godot_lsp_available()
         local ok, channel = pcall(vim.fn.sockconnect, "tcp", godot_lsp_addr, { rpc = false })
         if ok and channel > 0 then
@@ -225,6 +313,42 @@ return {
         gdscript = {
           root_dir = get_godot_root_dir,
         },
+        roslyn = {
+          cmd = get_roslyn_cmd(),
+          cmd_env = {
+            DOTNET_ROOT = vim.fn.expand("~/.dotnet"),
+          },
+          settings = {
+            ["csharp|background_analysis"] = {
+              dotnet_analyzer_diagnostics_scope = "openFiles",
+              dotnet_compiler_diagnostics_scope = "openFiles",
+            },
+            ["csharp|completion"] = {
+              dotnet_show_completion_items_from_unimported_namespaces = true,
+              dotnet_show_name_completion_suggestions = true,
+            },
+            ["csharp|formatting"] = {
+              dotnet_organize_imports_on_format = true,
+            },
+            ["csharp|inlay_hints"] = {
+              csharp_enable_inlay_hints_for_implicit_object_creation = true,
+              csharp_enable_inlay_hints_for_implicit_variable_types = true,
+              csharp_enable_inlay_hints_for_lambda_parameter_types = true,
+              csharp_enable_inlay_hints_for_types = true,
+              dotnet_enable_inlay_hints_for_indexer_parameters = true,
+              dotnet_enable_inlay_hints_for_literal_parameters = true,
+              dotnet_enable_inlay_hints_for_object_creation_parameters = true,
+              dotnet_enable_inlay_hints_for_other_parameters = true,
+              dotnet_enable_inlay_hints_for_parameters = true,
+              dotnet_suppress_inlay_hints_for_parameters_that_differ_only_by_suffix = true,
+              dotnet_suppress_inlay_hints_for_parameters_that_match_argument_name = true,
+              dotnet_suppress_inlay_hints_for_parameters_that_match_method_intent = true,
+            },
+            ["csharp|symbol_search"] = {
+              dotnet_search_reference_assemblies = true,
+            },
+          },
+        },
         lua_ls = {
           settings = {
             Lua = {
@@ -255,7 +379,10 @@ return {
       for server, opts in pairs(servers) do
         opts.capabilities = vim.tbl_deep_extend("force", {}, capabilities, opts.capabilities or {})
         vim.lsp.config(server, opts)
-        vim.lsp.enable(server)
+
+        if server ~= "roslyn" then
+          vim.lsp.enable(server)
+        end
       end
 
       vim.api.nvim_create_autocmd("LspAttach", {
@@ -271,9 +398,19 @@ return {
           keymap("n", "K", vim.lsp.buf.hover, opts)
           keymap("n", "<leader>rn", vim.lsp.buf.rename, opts)
           keymap("n", "<leader>ca", vim.lsp.buf.code_action, opts)
+          keymap("n", "<leader>lr", "<cmd>LspRestart<CR>", vim.tbl_extend("force", opts, { desc = "Restart LSP" }))
           keymap("n", "<leader>f", function()
             require("conform").format({ async = true, lsp_format = "fallback" })
           end, opts)
+
+          local client = vim.lsp.get_client_by_id(event.data.client_id)
+          if client and client.name == "roslyn" then
+            keymap("n", "<leader>lt", "<cmd>Roslyn target<CR>", vim.tbl_extend("force", opts, { desc = "Select Roslyn target" }))
+
+            if vim.lsp.inlay_hint then
+              vim.lsp.inlay_hint.enable(true, { bufnr = event.buf })
+            end
+          end
         end,
       })
     end,

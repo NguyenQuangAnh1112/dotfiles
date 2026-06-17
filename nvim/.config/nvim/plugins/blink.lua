@@ -141,7 +141,7 @@ return {
         },
       },
       sources = {
-        default = { "lsp", "buffer", "path" },
+        default = { "lsp", "snippets", "buffer", "path" },
         providers = {
           lsp = {
             name = "LSP",
@@ -159,6 +159,11 @@ return {
           path = {
             name = "Path",
             score_offset = 3,
+            max_items = 4,
+          },
+          snippets = {
+            name = "Snip",
+            score_offset = 1,
             max_items = 4,
           },
           buffer = {

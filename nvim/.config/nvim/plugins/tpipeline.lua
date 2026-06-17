@@ -3,6 +3,8 @@ return {
   lazy = false,
   init = function()
     vim.g.tpipeline_tabline = 1
+    -- Keep the tabline visible when the terminal/tmux pane loses focus.
+    vim.g.tpipeline_focuslost = 0
     -- Only embed the left side so tmux keeps its native status-right.
     vim.g.tpipeline_split = 0
     vim.g.tpipeline_embedopts = {

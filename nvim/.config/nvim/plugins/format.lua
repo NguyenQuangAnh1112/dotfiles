@@ -8,6 +8,7 @@ return {
         lsp_format = "fallback",
       },
       formatters_by_ft = {
+        cs = {},
         gdscript = { "gdscript-formatter" },
         lua = { "stylua" },
         python = { "ruff_format" },

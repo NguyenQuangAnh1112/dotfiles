@@ -1,0 +1,200 @@
+{
+  "Unity SerializeField": {
+    "prefix": "ser",
+    "description": "Serialized private field",
+    "body": [
+      "[SerializeField] private ${1:float} ${2:fieldName};"
+    ]
+  },
+  "Unity GetComponent In Awake": {
+    "prefix": "gc",
+    "description": "Cache a component in Awake",
+    "body": [
+      "private ${1:Rigidbody} ${2:rb};",
+      "",
+      "private void Awake()",
+      "{",
+      "    ${2:rb} = GetComponent<${1:Rigidbody}>();",
+      "}"
+    ]
+  },
+  "Unity Input Key Block": {
+    "prefix": "key",
+    "description": "Input.GetKeyDown block",
+    "body": [
+      "if (Input.GetKeyDown(KeyCode.${1:Space}))",
+      "{",
+      "    ${2}",
+      "}"
+    ]
+  },
+  "Unity Trigger Enter": {
+    "prefix": "ote",
+    "description": "OnTriggerEnter callback",
+    "body": [
+      "private void OnTriggerEnter(Collider other)",
+      "{",
+      "    if (other.CompareTag(\"${1:Player}\"))",
+      "    {",
+      "        ${2}",
+      "    }",
+      "}"
+    ]
+  },
+  "Unity Collision Enter": {
+    "prefix": "oce",
+    "description": "OnCollisionEnter callback",
+    "body": [
+      "private void OnCollisionEnter(Collision collision)",
+      "{",
+      "    ${1}",
+      "}"
+    ]
+  },
+  "Unity Awake Method": {
+    "prefix": "aw",
+    "description": "Awake lifecycle method",
+    "body": [
+      "private void Awake()",
+      "{",
+      "    ${1}",
+      "}"
+    ]
+  },
+  "Unity Start Method": {
+    "prefix": "st",
+    "description": "Start lifecycle method",
+    "body": [
+      "private void Start()",
+      "{",
+      "    ${1}",
+      "}"
+    ]
+  },
+  "Unity Update Method": {
+    "prefix": "up",
+    "description": "Update lifecycle method",
+    "body": [
+      "private void Update()",
+      "{",
+      "    ${1}",
+      "}"
+    ]
+  },
+  "Unity FixedUpdate Method": {
+    "prefix": "fup",
+    "description": "FixedUpdate lifecycle method",
+    "body": [
+      "private void FixedUpdate()",
+      "{",
+      "    ${1}",
+      "}"
+    ]
+  },
+  "Unity Enable Disable Pair": {
+    "prefix": "oen",
+    "description": "OnEnable and OnDisable methods",
+    "body": [
+      "private void OnEnable()",
+      "{",
+      "    ${1}",
+      "}",
+      "",
+      "private void OnDisable()",
+      "{",
+      "    ${2}",
+      "}"
+    ]
+  },
+  "Unity RequireComponent": {
+    "prefix": "req",
+    "description": "RequireComponent attribute",
+    "body": [
+      "[RequireComponent(typeof(${1:Rigidbody}))]"
+    ]
+  },
+  "Unity Header Field": {
+    "prefix": "hdr",
+    "description": "Header attribute with serialized field",
+    "body": [
+      "[Header(\"${1:Settings}\")]",
+      "[SerializeField] private ${2:float} ${3:fieldName} = ${4:defaultValue};"
+    ]
+  },
+  "Unity Range Field": {
+    "prefix": "rng",
+    "description": "Range attribute with serialized float",
+    "body": [
+      "[Range(${1:0f}, ${2:1f})]",
+      "[SerializeField] private float ${3:value} = ${4:0.5f};"
+    ]
+  },
+  "Unity 2D Trigger Enter": {
+    "prefix": "ote2d",
+    "description": "OnTriggerEnter2D callback",
+    "body": [
+      "private void OnTriggerEnter2D(Collider2D other)",
+      "{",
+      "    if (other.CompareTag(\"${1:Player}\"))",
+      "    {",
+      "        ${2}",
+      "    }",
+      "}"
+    ]
+  },
+  "Unity 2D Collision Enter": {
+    "prefix": "oce2d",
+    "description": "OnCollisionEnter2D callback",
+    "body": [
+      "private void OnCollisionEnter2D(Collision2D collision)",
+      "{",
+      "    ${1}",
+      "}"
+    ]
+  },
+  "CSharp EventHandler Event": {
+    "prefix": "evt",
+    "description": "C# EventHandler event declaration",
+    "body": [
+      "public event System.EventHandler ${1:OnSomething};"
+    ]
+  },
+  "CSharp EventHandler Event Args": {
+    "prefix": "evtargs",
+    "description": "C# EventHandler<TEventArgs> event with matching EventArgs class",
+    "body": [
+      "public event System.EventHandler<${1:OnSelectedCounterChanged}EventArgs> ${1:OnSelectedCounterChanged};",
+      "",
+      "public class ${1:OnSelectedCounterChanged}EventArgs : System.EventArgs",
+      "{",
+      "    public ${2:BaseCounter} ${3:selectedCounter};",
+      "}"
+    ]
+  },
+  "Unity Debug Log": {
+    "prefix": "log",
+    "description": "Debug.Log",
+    "body": [
+      "Debug.Log(${1:\"message\"});"
+    ]
+  },
+  "Unity Singleton": {
+    "prefix": "sg",
+    "description": "Simple MonoBehaviour singleton",
+    "body": [
+      "public static ${1:${TM_FILENAME_BASE}} Instance { get; private set; }",
+      "",
+      "private void Awake()",
+      "{",
+      "    if (Instance != null && Instance != this)",
+      "    {",
+      "        Destroy(gameObject);",
+      "        return;",
+      "    }",
+      "",
+      "    Instance = this;",
+      "    ${2:DontDestroyOnLoad(gameObject);}",
+      "}"
+    ]
+  }
+}

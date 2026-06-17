@@ -9,17 +9,21 @@ default_border none
 default_floating_border none
 smart_borders on
 hide_edge_borders smart
+floating_modifier $mod
+focus_on_window_activation smart
 
 # Environment
 exec_always --no-startup-id dbus-update-activation-environment --systemd DISPLAY XAUTHORITY XDG_SESSION_TYPE=x11 XDG_CURRENT_DESKTOP=i3 DESKTOP_SESSION=i3 XDG_SESSION_DESKTOP=i3
-exec_always --no-startup-id sh -c 'pgrep -u "$USER" -x picom >/dev/null 2>&1 || { command -v picom >/dev/null 2>&1 && picom --config "$HOME/.config/picom/picom.conf" -b; }'
+exec_always --no-startup-id ~/.config/i3/touchpad.sh
+exec_always --no-startup-id sh -c 'pkill -f "$HOME/.config/i3/fast-wheel.py" 2>/dev/null || true; WHEEL_SCROLL_MULTIPLIER=2 "$HOME/.config/i3/fast-wheel.py" >/tmp/fast-wheel.log 2>&1 &'
+exec_always --no-startup-id sh -c 'command -v xset >/dev/null 2>&1 && xset s off -dpms s noblank'
+exec_always --no-startup-id sh -c 'pgrep -u "$USER" -x picom >/dev/null 2>&1 || { command -v picom >/dev/null 2>&1 && picom --config "$HOME/.config/picom/picom.conf" --use-damage -b; }'
 exec_always --no-startup-id sh -c 'command -v xrdb >/dev/null 2>&1 && xrdb -merge "$HOME/.Xresources"'
 exec --no-startup-id sh -c 'command -v dunst >/dev/null 2>&1 && dunst'
 exec --no-startup-id sh -c 'command -v fcitx5 >/dev/null 2>&1 && fcitx5 -d'
 exec --no-startup-id sh -c 'command -v copyq >/dev/null 2>&1 && copyq'
 exec --no-startup-id ~/.config/i3/start-polkit-agent.sh
-exec_always --no-startup-id ~/.config/i3/monitor-layout.sh
-exec_always --no-startup-id ~/.config/i3/wallpaper-select.sh --restore
+exec_always --no-startup-id sh -c '~/.config/i3/monitor-layout.sh; sleep 0.3; ~/.config/i3/wallpaper-select.sh --restore'
 
 # Apps
 bindsym $mod+Return exec --no-startup-id $x11 GLFW_IM_MODULE=ibus $term
@@ -28,8 +32,9 @@ bindsym $mod+d exec --no-startup-id $x11 $menu
 bindsym Mod1+space exec --no-startup-id $x11 $menu
 bindsym Mod1+r exec --no-startup-id $x11 rofi -show run
 bindcode --release Mod1+Shift+65 exec --no-startup-id $x11 rofi -modes run -show run -display-run "GPU" -run-command "env DRI_PRIME=1 {cmd}"
-bindsym $mod+e exec --no-startup-id $x11 nautilus
+bindsym $mod+e exec --no-startup-id $x11 thunar
 bindsym $mod+f exec --no-startup-id $x11 firefox
+bindsym $mod+u exec --no-startup-id ~/.config/i3/unity-launch.sh
 bindsym $mod+Shift+s exec --no-startup-id $x11 flameshot gui -c
 bindsym $mod+n exec --no-startup-id $x11 nm-connection-editor
 bindsym $mod+Shift+n exec --no-startup-id $x11 nm-connection-editor
@@ -98,7 +103,7 @@ workspace $ws6 output eDP-1
 workspace $ws7 output eDP-1
 workspace $ws8 output eDP-1
 workspace $ws9 output eDP-1
-workspace $ws10 output eDP-1
+workspace $ws10 output primary eDP-1
 
 bindsym $mod+1 focus output eDP-1; workspace number $ws1
 bindsym $mod+2 focus output eDP-1; workspace number $ws2
@@ -109,7 +114,7 @@ bindsym $mod+6 focus output eDP-1; workspace number $ws6
 bindsym $mod+7 focus output eDP-1; workspace number $ws7
 bindsym $mod+8 focus output eDP-1; workspace number $ws8
 bindsym $mod+9 focus output eDP-1; workspace number $ws9
-bindsym $mod+0 focus output eDP-1; workspace number $ws10
+bindsym $mod+0 workspace number $ws10
 
 bindsym $mod+Shift+1 move container to workspace number $ws1
 bindsym $mod+Shift+2 move container to workspace number $ws2
@@ -127,6 +132,14 @@ bindsym $mod+Control+Left workspace prev_on_output
 bindsym $mod+Control+h move workspace to output left
 bindsym $mod+Control+l move workspace to output right
 bindsym $mod+space exec --no-startup-id ~/.config/i3/swap-panes.sh
+
+# Unity
+assign [class="^(unityhub|UnityHub)$"] $ws10
+assign [class="^(Unity|UnityEditor|unity-editor)$"] $ws10
+for_window [class="^(Unity|UnityEditor|unity-editor)$" window_type="dialog"] floating enable, border normal, move position center, focus
+for_window [class="^(Unity|UnityEditor|unity-editor)$" window_type="utility"] floating enable, border normal, move position center, focus
+for_window [class="^(Unity|UnityEditor|unity-editor)$" window_type="toolbar"] floating enable, border normal, move position center, focus
+for_window [class="^(Unity|UnityEditor|unity-editor)$" window_role="pop-up"] floating enable, border normal, move position center, focus
 
 # Media
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%

@@ -6,6 +6,7 @@ return {
     config = function()
       local ts = require("nvim-treesitter")
       local languages = {
+        "c_sharp",
         "gdscript",
         "gdshader",
         "godot_resource",
@@ -25,6 +26,7 @@ return {
 
       vim.api.nvim_create_autocmd("FileType", {
         pattern = {
+          "cs",
           "gdscript",
           "gdshader",
           "gdresource",

@@ -16,20 +16,23 @@ vim.opt.rtp:prepend(lazypath)
 
 local plugin_specs = {
 	"blink",
-	"carvion",
+	"zenbones",
+	-- "cole",
+	-- "carvion",
+	-- "vesper",
 	-- "rose-pine",
 	"flash",
-	"fzf",
+	"fff",
 	"format",
 	"lsp",
 	"mini",
 	"oil",
+	"progress",
 	"render-markdown",
 	"tabby",
 	"tmux-navigator",
 	"treesiter",
 	"tpipeline",
-	"yazi",
 }
 
 local spec = vim.tbl_map(function(name)
@@ -38,6 +41,6 @@ end, plugin_specs)
 
 require("lazy").setup({
 	spec = spec,
-	install = { colorscheme = { "carvion" } },
+	install = { colorscheme = { "zenbones" } },
 	checker = { enabled = false },
 })

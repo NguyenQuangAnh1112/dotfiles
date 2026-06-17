@@ -215,6 +215,8 @@ end
 
 keymap("n", "<Esc>", "<cmd>nohlsearch<CR>")
 keymap("n", "<leader><leader>", "zz", { desc = "Center cursor line" })
+keymap("n", "<C-e>", "<C-e>j", { desc = "Scroll down and move cursor down" })
+keymap("n", "<C-y>", "<C-y>k", { desc = "Scroll up and move cursor up" })
 
 keymap("n", "<leader>w", "<cmd>w<CR>", { desc = "Save file" })
 keymap("n", "<leader>q", "<cmd>q<CR>", { desc = "Quit window" })
@@ -231,10 +233,6 @@ keymap("n", "<C-l>", "<C-w>l", { desc = "Move to right split" })
 
 keymap("n", "<leader>sv", "<cmd>vsplit<CR><cmd>Oil<CR>", { desc = "Vsplit and open Oil" })
 keymap("n", "<leader>sh", "<cmd>split<CR>", { desc = "Split horizontally" })
-keymap("n", "<leader>s.", "<cmd>vsplit<CR><C-w>l<cmd>FzfLua files<CR>", { desc = "Vsplit and find files" })
-keymap("n", "<leader>s,", "<cmd>vsplit<CR><C-w>l<cmd>FzfLua buffers<CR>", { desc = "Vsplit and switch buffer" })
-keymap("n", "<leader>s/", "<cmd>vsplit<CR><C-w>l<cmd>FzfLua live_grep<CR>", { desc = "Vsplit and live grep" })
-keymap("n", "<leader>s?", "<cmd>vsplit<CR><C-w>l<cmd>FzfLua help_tags<CR>", { desc = "Vsplit and help tags" })
 keymap("n", "<leader>\\", "<cmd>vsplit<CR><cmd>terminal<CR>", { desc = "Vsplit and open terminal" })
 keymap("n", "<leader>rr", run_current_file_in_new_tab, { desc = "Run file or Love project in new tab" })
 
