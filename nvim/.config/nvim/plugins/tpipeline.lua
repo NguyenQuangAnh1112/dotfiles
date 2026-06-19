@@ -5,12 +5,12 @@ return {
     vim.g.tpipeline_tabline = 1
     -- Keep the tabline visible when the terminal/tmux pane loses focus.
     vim.g.tpipeline_focuslost = 0
-    -- Only embed the left side so tmux keeps its native status-right.
+    -- Keep tmux session/time info on the right while tpipeline owns the left side.
     vim.g.tpipeline_split = 0
     vim.g.tpipeline_embedopts = {
       "status-left-length 200",
       "status-left '#(cat #{socket_path}-\\#{session_id}-vimbridge)'",
-      "status-right '#[fg=#9a9a9a]#S-%H:%M'",
+      "status-right '#{E:@status-right-sessions}'",
     }
   end,
   config = function()
