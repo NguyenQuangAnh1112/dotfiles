@@ -213,17 +213,18 @@ export CUDA_HOME=/usr/local/cuda-13.2
 # YAZI
 ########################
 
-function y() {
+function yazi() {
   local tmp cwd
   tmp="$(mktemp -t yazi-cwd.XXXXXX)"
-  yazi "$@" --cwd-file="$tmp"
+  command yazi --cwd-file="$tmp" "$@"
   if cwd="$(command cat "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
     builtin cd -- "$cwd"
   fi
   rm -f -- "$tmp"
 }
 
-alias yy=y
+alias y=yazi
+alias yy=yazi
 
 ########################
 # INPUT METHOD (VIETNAMESE)
@@ -262,3 +263,7 @@ export PATH=$PATH:$HOME/.local/opt/go/bin
 export PATH=$PATH:$HOME/go/bin
 export PATH=$HOME/.npm-global/bin:$PATH
 export PATH="$HOME/.cargo/bin:$PATH"
+
+
+# Added by Antigravity CLI installer
+export PATH="/home/muggle/.local/bin:$PATH"
