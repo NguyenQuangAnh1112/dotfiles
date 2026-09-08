@@ -16,7 +16,10 @@ vim.opt.rtp:prepend(lazypath)
 
 local plugin_specs = {
 	"blink",
-	"zenbones",
+	"kanagawa",
+	-- "vscode",
+	-- "kanso",
+	-- "zenbones",
 	-- "cole",
 	-- "carvion",
 	-- "vesper",
@@ -33,6 +36,7 @@ local plugin_specs = {
 	"tmux-navigator",
 	"treesiter",
 	"tpipeline",
+	"ufo",
 }
 
 local spec = vim.tbl_map(function(name)
@@ -41,6 +45,6 @@ end, plugin_specs)
 
 require("lazy").setup({
 	spec = spec,
-	install = { colorscheme = { "zenbones" } },
+	install = { colorscheme = { "kanagawa-dragon" } },
 	checker = { enabled = false },
 })

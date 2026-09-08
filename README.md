@@ -8,6 +8,7 @@ Packages:
 - `x11`: `.xinitrc`, `.xprofile`, `.Xresources`
 - `nvim`: `.config/nvim`
 - `i3`: `.config/i3/config`, `monitor-layout.sh`, `swap-panes.sh`
+- `sway`: `.config/sway/config`
 - `terminals`: `alacritty`, `kitty`, `ghostty`, `tmux.conf`
 - `desktop`: `rofi`, `picom`, `kanata`
 - `yazi`: `keymap.toml`, `yazi.toml`

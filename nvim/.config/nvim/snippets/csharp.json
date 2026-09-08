@@ -196,5 +196,19 @@
       "    ${2:DontDestroyOnLoad(gameObject);}",
       "}"
     ]
+  },
+  "Unity Header": {
+    "prefix": "hd",
+    "description": "Header attribute",
+    "body": [
+      "[Header(\"${1:Header}\")]"
+    ]
+  },
+  "Unity Singleton Declaration": {
+    "prefix": "slt",
+    "description": "Singleton property declaration only",
+    "body": [
+      "public static ${1:${TM_FILENAME_BASE}} Instance { get; private set; }"
+    ]
   }
 }

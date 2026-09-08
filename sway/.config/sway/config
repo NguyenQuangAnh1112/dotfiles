@@ -1,0 +1,219 @@
+# ==============================================================================
+# SWAY WINDOW MANAGER CONFIGURATION
+# ==============================================================================
+
+### Variables
+set $mod Mod4
+set $term kitty
+set $menu wofi --show drun --insensitive --prompt "Search..."
+
+### Appearance
+font pango:monospace 10
+
+default_border pixel 2
+default_floating_border normal 2
+smart_borders on
+hide_edge_borders smart
+focus_follows_mouse yes
+floating_modifier $mod
+
+# class                 border  bground text    indicator child_border
+client.focused          #88507a #88507a #ffffff #c4a7e7   #88507a
+client.focused_inactive #403d52 #403d52 #e0def4 #403d52   #403d52
+client.unfocused        #26233a #191724 #6e6a86 #26233a   #191724
+client.urgent           #eb6f92 #eb6f92 #ffffff #eb6f92   #eb6f92
+
+### Output & Wallpaper
+output * bg /home/muggle/Pictures/bg/japan-artistic-3840x2160-25406.jpg fill
+
+# Màn phụ (màn rời 27" 2K 100Hz) bên trái
+output HDMI-A-5 pos 0 0 mode 2560x1440@100Hz
+
+# Màn chính (Laptop 15.6" FHD 144Hz) bên phải
+output eDP-1 pos 2560 0 mode 1920x1080@144Hz
+
+### Input configuration
+input "type:touchpad" {
+    dwt enabled
+    tap enabled
+    natural_scroll enabled
+    middle_emulation enabled
+}
+
+input "type:keyboard" {
+    xkb_layout "us"
+}
+
+### Idle & Screen Lock (Disabled)
+# exec swayidle -w \
+#     timeout 300 'swaylock -f -c 000000' \
+#     timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
+#     before-sleep 'swaylock -f -c 000000'
+
+### Autostart
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway && systemctl --user start sway-session.target
+exec_always sh -c 'command -v fcitx5 >/dev/null 2>&1 && fcitx5 -d'
+exec_always sh -c 'command -v mako >/dev/null 2>&1 && mako'
+exec ~/.config/i3/start-polkit-agent.sh
+exec easyeffects --hide-window --service-mode
+
+### Application Shortcuts
+bindsym $mod+Return exec $term
+bindsym $mod+Shift+Return exec ghostty
+bindsym $mod+d exec $menu
+bindsym Mod1+space exec $menu
+bindsym $mod+f exec firefox
+bindsym $mod+e exec nautilus
+bindsym $mod+u exec ~/.config/i3/unity-launch.sh
+bindsym $mod+q kill
+
+# Screenshot to clipboard (Select area)
+bindsym $mod+Shift+s exec grim -g "$(slurp)" - | wl-copy && notify-send "Screenshot" "Đã lưu ảnh chụp vùng chọn vào clipboard"
+# Screenshot entire screen
+bindsym Print exec grim - | wl-copy && notify-send "Screenshot" "Đã chụp toàn màn hình vào clipboard"
+
+### Navigation (Vim keys)
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+
+
+### Window Movement
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+### Layout Management
+bindsym $mod+backslash layout toggle split
+bindsym $mod+m layout tabbed
+bindsym $mod+minus layout stacking
+bindsym $mod+Shift+f fullscreen toggle
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+space focus mode_toggle
+
+### Workspaces
+# Màn chính (eDP-1): 1, 2, 3, 4, 5
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+set $ws5 "5"
+
+# Màn rời (HDMI-A-5): F1, F2, F3, F4, F5
+set $wsF1 "6:F1"
+set $wsF2 "7:F2"
+set $wsF3 "8:F3"
+set $wsF4 "9:F4"
+set $wsF5 "10:F5"
+
+# Gán workspace cho màn hình tương ứng
+workspace $ws1 output eDP-1
+workspace $ws2 output eDP-1
+workspace $ws3 output eDP-1
+workspace $ws4 output eDP-1
+workspace $ws5 output eDP-1
+
+workspace $wsF1 output HDMI-A-5
+workspace $wsF2 output HDMI-A-5
+workspace $wsF3 output HDMI-A-5
+workspace $wsF4 output HDMI-A-5
+workspace $wsF5 output HDMI-A-5
+
+# Switch workspace (focus về màn hình tương ứng)
+# Màn chính (eDP-1): 1-5
+bindsym $mod+1 focus output eDP-1; workspace number $ws1
+bindsym $mod+2 focus output eDP-1; workspace number $ws2
+bindsym $mod+3 focus output eDP-1; workspace number $ws3
+bindsym $mod+4 focus output eDP-1; workspace number $ws4
+bindsym $mod+5 focus output eDP-1; workspace number $ws5
+
+# Màn rời (HDMI-A-5): F1-F5
+bindsym $mod+F1 focus output HDMI-A-5; workspace number $wsF1
+bindsym $mod+F2 focus output HDMI-A-5; workspace number $wsF2
+bindsym $mod+F3 focus output HDMI-A-5; workspace number $wsF3
+bindsym $mod+F4 focus output HDMI-A-5; workspace number $wsF4
+bindsym $mod+F5 focus output HDMI-A-5; workspace number $wsF5
+
+# Chuyển focus giữa 2 màn hình
+bindsym $mod+Tab focus output right
+bindsym $mod+Shift+Tab focus output left
+
+# Move container to workspace
+bindsym $mod+Shift+1 move container to workspace number $ws1
+bindsym $mod+Shift+2 move container to workspace number $ws2
+bindsym $mod+Shift+3 move container to workspace number $ws3
+bindsym $mod+Shift+4 move container to workspace number $ws4
+bindsym $mod+Shift+5 move container to workspace number $ws5
+
+bindsym $mod+Shift+F1 move container to workspace number $wsF1
+bindsym $mod+Shift+F2 move container to workspace number $wsF2
+bindsym $mod+Shift+F3 move container to workspace number $wsF3
+bindsym $mod+Shift+F4 move container to workspace number $wsF4
+bindsym $mod+Shift+F5 move container to workspace number $wsF5
+
+### Resize Mode
+mode "resize" {
+    bindsym h resize shrink width 10 px
+    bindsym j resize grow height 10 px
+    bindsym k resize shrink height 10 px
+    bindsym l resize grow width 10 px
+    bindsym Left resize shrink width 10 px
+    bindsym Down resize grow height 10 px
+    bindsym Up resize shrink height 10 px
+    bindsym Right resize grow width 10 px
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
+
+### Media & Volume Controls
+bindsym XF86AudioRaiseVolume exec wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
+bindsym XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+bindsym XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+bindsym XF86AudioMicMute exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+bindsym XF86AudioPlay exec sh -c 'command -v playerctl >/dev/null 2>&1 && playerctl play-pause'
+bindsym XF86AudioNext exec sh -c 'command -v playerctl >/dev/null 2>&1 && playerctl next'
+bindsym XF86AudioPrev exec sh -c 'command -v playerctl >/dev/null 2>&1 && playerctl previous'
+bindsym XF86MonBrightnessUp exec brightnessctl set +10%
+bindsym XF86MonBrightnessDown exec brightnessctl set 10%-
+
+bindsym $mod+Up exec wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
+bindsym $mod+Down exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+bindsym $mod+Right exec brightnessctl set +10%
+bindsym $mod+Left exec brightnessctl set 10%-
+
+### Window Rules (Unity Engine & Dialogs)
+assign [class="^(?i)unityhub$"] workspace number $wsF1
+assign [app_id="^(?i)unityhub$"] workspace number $wsF1
+assign [class="^(?i)(unity|unityeditor)$"] workspace number $wsF1
+assign [app_id="^(?i)(unity|unityeditor)$"] workspace number $wsF1
+
+for_window [class="^(?i)(unity|unityeditor)$" window_type="dialog"] floating enable, move position center, focus
+for_window [class="^(?i)(unity|unityeditor)$" window_type="utility"] floating enable, move position center, focus
+for_window [class="^(?i)(unity|unityeditor)$" window_type="toolbar"] floating enable, move position center, focus
+for_window [class="^(?i)(unity|unityeditor)$" window_role="pop-up"] floating enable, move position center, focus
+
+### Session Controls
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+r reload
+bindsym $mod+Shift+e exec swaynag -t warning -m 'Exit Sway?' -B 'Yes, exit sway' 'swaymsg exit'
+bindsym $mod+Shift+x exec swaylock -f -c 000000
+bindsym $mod+Shift+z exec sh -c 'swaylock -f -c 000000 && systemctl suspend'
+
+### Bar
+bar {
+    id bar-0
+    swaybar_command waybar
+    position top
+    mode hide
+    hidden_state hide
+    modifier Mod4
+}
+bindsym $mod+b bar bar-0 mode toggle

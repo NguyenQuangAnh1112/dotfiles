@@ -56,6 +56,8 @@ export EDITOR=nvim
 
 [ -d "$HOME/.local/bin" ] && export PATH="$HOME/.local/bin:$PATH"
 [ -d "$HOME/.npm-global/bin" ] && export PATH="$HOME/.npm-global/bin:$PATH"
+[ -d "$HOME/.dotnet" ] && export PATH="$HOME/.dotnet:$PATH"
+export DOTNET_ROOT="$HOME/.dotnet"
 
 ########################
 # ALIASES
@@ -267,3 +269,11 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 # Added by Antigravity CLI installer
 export PATH="/home/muggle/.local/bin:$PATH"
+
+########################
+# FEDORA UPDATE REMINDER
+########################
+
+if [[ -o interactive ]] && command -v fedora-update-check &>/dev/null; then
+  fedora-update-check
+fi

@@ -23,7 +23,9 @@ external_output() {
 
 external=$(external_output || true)
 
-if command -v i3-msg >/dev/null 2>&1; then
+if command -v swaymsg >/dev/null 2>&1 && [ -n "${SWAYSOCK:-}" ]; then
+    swaymsg "focus output HDMI-A-5; workspace number 6:0" >/dev/null 2>&1 || true
+elif command -v i3-msg >/dev/null 2>&1; then
     i3-msg "workspace number $workspace" >/dev/null
     if [ -n "$external" ]; then
         i3-msg "move workspace to output $external" >/dev/null
@@ -34,11 +36,9 @@ export XDG_SESSION_TYPE=x11
 export XCURSOR_THEME=Bibata-Modern-Ice
 export XCURSOR_SIZE=32
 
-if [ -n "$external" ]; then
-    export DRI_PRIME=1
-    export __NV_PRIME_RENDER_OFFLOAD=1
-    export __GLX_VENDOR_LIBRARY_NAME=nvidia
-    export __VK_LAYER_NV_optimus=NVIDIA_only
-fi
+export DRI_PRIME=1
+export __NV_PRIME_RENDER_OFFLOAD=1
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+export __VK_LAYER_NV_optimus=NVIDIA_only
 
 exec "$unityhub" "$@"

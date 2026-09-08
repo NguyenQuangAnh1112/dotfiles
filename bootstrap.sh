@@ -4,7 +4,7 @@ set -euo pipefail
 
 REPO_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 TARGET_DIR=${HOME}
-PACKAGES=(shell git x11 nvim i3 terminals desktop yazi bat)
+PACKAGES=(shell git x11 nvim i3 sway terminals desktop yazi bat)
 ASSUME_YES=0
 SKIP_INSTALL=0
 
@@ -144,11 +144,19 @@ run_stow() {
   stow -d "$REPO_DIR" -Rv -t "$TARGET_DIR" "${PACKAGES[@]}"
 }
 
+build_helpers() {
+  if [ -f "$REPO_DIR/desktop/.local/src/unity-undecorate/Makefile" ] && command -v make >/dev/null 2>&1 && command -v gcc >/dev/null 2>&1; then
+    log "Building unity-undecorate helper library"
+    make -C "$REPO_DIR/desktop/.local/src/unity-undecorate" --silent
+  fi
+}
+
 main() {
   parse_args "$@"
   check_packages
   install_stow
   command -v stow >/dev/null 2>&1 || die "GNU Stow is still unavailable after installation attempt."
+  build_helpers
   run_stow
   log "Bootstrap complete"
 }

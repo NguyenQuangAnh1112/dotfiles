@@ -33,7 +33,7 @@ build/
 # Secrets and machine-local state
 .env
 .env.*
-*.local
+?*.local
 *.secret
 *.secrets
 **/.config/gh/hosts.yml

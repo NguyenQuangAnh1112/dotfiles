@@ -94,6 +94,7 @@ return {
       },
       appearance = {
         nerd_font_variant = "mono",
+        use_nvim_cmp_as_default = true,
       },
       completion = {
         trigger = {
@@ -109,6 +110,7 @@ return {
         menu = {
           border = "rounded",
           draw = {
+            treesitter = { "lsp" },
             columns = {
               { "kind_icon" },
               { "label", "label_description", gap = 1 },
@@ -210,39 +212,43 @@ return {
     config = function(_, opts)
       require("blink.cmp").setup(opts)
 
-      local groups = {
-        "BlinkCmpMenu",
-        "BlinkCmpMenuBorder",
-        "BlinkCmpDoc",
-        "BlinkCmpDocBorder",
-        "BlinkCmpSignatureHelp",
-        "BlinkCmpSignatureHelpBorder",
-        "BlinkCmpScrollBarThumb",
-        "BlinkCmpScrollBarGutter",
-        "Pmenu",
-        "PmenuKind",
-        "PmenuExtra",
-        "PmenuSbar",
-        "PmenuThumb",
-      }
-
       local function set_blink_hl()
-        for _, group in ipairs(groups) do
-          local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = group, link = false })
+        local popup_groups = {
+          "BlinkCmpMenu",
+          "BlinkCmpMenuBorder",
+          "BlinkCmpDoc",
+          "BlinkCmpDocBorder",
+          "BlinkCmpSignatureHelp",
+          "BlinkCmpSignatureHelpBorder",
+          "Pmenu",
+          "PmenuKind",
+          "PmenuExtra",
+          "PmenuSbar",
+        }
+        for _, g in ipairs(popup_groups) do
+          local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = g, link = false })
           if ok then
-            hl.bg = "none"
-            hl.ctermbg = "none"
-            vim.api.nvim_set_hl(0, group, hl)
+            hl.bg = "NONE"
+            hl.ctermbg = "NONE"
+            vim.api.nvim_set_hl(0, g, hl)
           end
         end
 
-        vim.api.nvim_set_hl(0, "PmenuSel", { fg = "#0b1020", bg = "#ffd166", bold = true, nocombine = true, blend = 0 })
-        vim.api.nvim_set_hl(
-          0,
-          "BlinkCmpMenuSelection",
-          { fg = "#0b1020", bg = "#ffd166", bold = true, nocombine = true }
-        )
-        vim.api.nvim_set_hl(0, "BlinkCmpMenuSelectionBorder", { fg = "#ffd166", bg = "none", bold = true, nocombine = true })
+        local ok_types, types = pcall(require, "blink.cmp.types")
+        if ok_types and types.CompletionItemKind then
+          vim.api.nvim_set_hl(0, "BlinkCmpKind", { link = "CmpItemKind" })
+          for _, kind in ipairs(types.CompletionItemKind) do
+            vim.api.nvim_set_hl(0, "BlinkCmpKind" .. kind, { link = "CmpItemKind" .. kind })
+          end
+        end
+
+        vim.api.nvim_set_hl(0, "PmenuSel", { fg = "#ffffff", bg = "#2D4F67", bold = true, nocombine = true })
+        vim.api.nvim_set_hl(0, "BlinkCmpMenuSelection", { fg = "#ffffff", bg = "#2D4F67", bold = true, nocombine = true })
+        vim.api.nvim_set_hl(0, "BlinkCmpMenuSelectionBorder", { fg = "#7FB4CA", bg = "NONE", bold = true })
+        vim.api.nvim_set_hl(0, "BlinkCmpLabelMatch", { link = "CmpItemAbbrMatch" })
+        vim.api.nvim_set_hl(0, "BlinkCmpLabelDetail", { link = "Comment" })
+        vim.api.nvim_set_hl(0, "BlinkCmpLabelDescription", { link = "Comment" })
+        vim.api.nvim_set_hl(0, "BlinkCmpSource", { link = "CmpItemMenu" })
       end
 
       set_blink_hl()

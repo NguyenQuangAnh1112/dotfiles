@@ -16,12 +16,12 @@ local function get_target_score(target)
     score = score - 100
   end
 
-  if target:match("%.sln$") then
+  if target:match("%.slnf$") then
+    score = score - 50
+  elseif target:match("%.sln$") then
     score = score - 30
   elseif target:match("%.slnx$") then
     score = score - 20
-  elseif target:match("%.slnf$") then
-    score = score - 10
   end
 
   return score
@@ -64,7 +64,7 @@ return {
     },
     opts = {
       ensure_installed = {
-        "basedpyright",
+        "pyrefly",
         "lua_ls",
       },
       automatic_installation = true,
@@ -80,7 +80,7 @@ return {
     opts = {
       ensure_installed = {
         "gdscript-formatter",
-        "roslyn-language-server",
+        "roslyn",
         "ruff",
         "stylua",
       },
@@ -93,7 +93,7 @@ return {
       filewatching = "roslyn",
       choose_target = choose_roslyn_target,
       broad_search = false,
-      lock_target = false,
+      lock_target = true,
     },
   },
   {
@@ -225,7 +225,10 @@ return {
           dotnet = "dotnet"
         end
 
-        local package_path = vim.fs.joinpath(vim.fn.stdpath("data"), "mason", "packages", "roslyn-language-server")
+        local package_path = vim.fs.joinpath(vim.fn.stdpath("data"), "mason", "packages", "roslyn")
+        if vim.fn.isdirectory(package_path) == 0 then
+          package_path = vim.fs.joinpath(vim.fn.stdpath("data"), "mason", "packages", "roslyn-language-server")
+        end
         local dlls = vim.fs.find("Microsoft.CodeAnalysis.LanguageServer.dll", {
           path = package_path,
           type = "file",
@@ -237,7 +240,7 @@ return {
             dotnet,
             dlls[1],
             "--logLevel",
-            "Information",
+            "Warning",
             "--extensionLogDirectory",
             vim.fs.joinpath(vim.fn.stdpath("cache"), "roslyn_ls", "logs"),
             "--stdio",
@@ -294,18 +297,13 @@ return {
       end
 
       local servers = {
-        basedpyright = {
+        pyrefly = {
+          cmd = { "pyrefly", "lsp" },
+          filetypes = { "python" },
+          root_markers = { "pyrefly.toml", "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", ".git" },
           settings = {
-            basedpyright = {
-              analysis = {
-                diagnosticMode = "openFilesOnly",
-                typeCheckingMode = "basic",
-                diagnosticSeverityOverrides = {
-                  reportMissingTypeStubs = "none",
-                  reportUnusedImport = "none",
-                  reportUnusedVariable = "none",
-                },
-              },
+            pyrefly = {
+              typeCheckingMode = "basic",
             },
           },
         },
@@ -317,6 +315,11 @@ return {
           cmd = get_roslyn_cmd(),
           cmd_env = {
             DOTNET_ROOT = vim.fn.expand("~/.dotnet"),
+            DOTNET_TieredPGO = "1",
+            DOTNET_TC_QuickJitForLoops = "1",
+            DOTNET_ReadyToRun = "1",
+            DOTNET_CLI_TELEMETRY_OPTOUT = "1",
+            DOTNET_MULTILEVEL_LOOKUP = "0",
           },
           settings = {
             ["csharp|background_analysis"] = {
@@ -345,7 +348,7 @@ return {
               dotnet_suppress_inlay_hints_for_parameters_that_match_method_intent = true,
             },
             ["csharp|symbol_search"] = {
-              dotnet_search_reference_assemblies = true,
+              dotnet_search_reference_assemblies = false,
             },
           },
         },

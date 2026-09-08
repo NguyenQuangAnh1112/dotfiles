@@ -30,6 +30,7 @@ return {
         display = {
           progress_icon = { pattern = "dots", period = 1 },
           done_icon = "✓",
+          done_ttl = 0.1,
           format_message = format_lsp_progress,
         },
       },
