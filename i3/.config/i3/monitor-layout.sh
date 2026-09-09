@@ -65,7 +65,7 @@ if [ -n "$internal" ] && [ -n "$external" ]; then
     internal_args=$(mode_args "$internal" "")
     external_args=$(mode_args "$external" "100")
     # shellcheck disable=SC2086
-    xrandr $external_args --primary --left-of "$internal" $internal_args
+    xrandr $external_args --primary --pos 0x0 $internal_args --pos 2560x360
     move_unity_workspace_to_primary
 elif [ -n "$internal" ]; then
     internal_args=$(mode_args "$internal" "")

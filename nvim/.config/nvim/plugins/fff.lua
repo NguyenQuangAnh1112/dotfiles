@@ -296,6 +296,191 @@ local function tabs()
   })
 end
 
+local function switch_to_existing_file_window(path)
+  local real_path = vim.fs.normalize(path)
+  for _, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
+      local bufnr = vim.api.nvim_win_get_buf(win)
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        local buf_name = vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr))
+        if buf_name == real_path then
+          vim.api.nvim_set_current_tabpage(tabpage)
+          vim.api.nvim_set_current_win(win)
+          return true
+        end
+      end
+    end
+  end
+  return false
+end
+
+local function open_file(path, target)
+  target = target or "current"
+  if target == "current" and switch_to_existing_file_window(path) then
+    return
+  end
+
+  if target == "tab" then
+    vim.cmd("tabnew")
+  elseif target == "split" then
+    vim.cmd("rightbelow vsplit")
+  end
+
+  vim.cmd.edit(vim.fn.fnameescape(path))
+end
+
+local function get_git_status_items()
+  local buf_path = vim.api.nvim_buf_get_name(0)
+  local search_dir = (buf_path ~= "" and vim.fs.dirname(buf_path)) or vim.fn.getcwd()
+  local git_root = vim.fn.systemlist("git -C " .. vim.fn.shellescape(search_dir) .. " rev-parse --show-toplevel")[1]
+
+  if vim.v.shell_error ~= 0 or not git_root or git_root == "" then
+    git_root = vim.fn.systemlist("git rev-parse --show-toplevel")[1]
+    if vim.v.shell_error ~= 0 or not git_root or git_root == "" then
+      vim.notify("Không tìm thấy Git repository", vim.log.levels.WARN)
+      return nil
+    end
+  end
+
+  local lines = vim.fn.systemlist("git -C " .. vim.fn.shellescape(git_root) .. " status --porcelain -u")
+  if vim.v.shell_error ~= 0 then
+    vim.notify("Lỗi khi chạy git status", vim.log.levels.ERROR)
+    return nil
+  end
+
+  local items = {}
+  for _, line in ipairs(lines) do
+    if #line >= 4 then
+      local raw_status = line:sub(1, 2)
+      local worktree_status = line:sub(2, 2)
+      local rel_path = line:sub(4)
+      if rel_path:match('^"(.*)"$') then
+        rel_path = rel_path:match('^"(.*)"$'):gsub('\\"', '"')
+      end
+      local full_path = vim.fs.joinpath(git_root, rel_path)
+
+      -- CHỈ lấy những file CHƯA DUYỆT XONG (còn thay đổi ở working tree):
+      -- 1. File mới AI vừa tạo: raw_status == "??"
+      -- 2. File AI vừa sửa: worktree_status ~= " " (ví dụ " M", "MM", " D")
+      -- Những file đã stage xong (đã <leader>hs hết) sẽ tự động biến mất khỏi danh sách chờ duyệt!
+      local needs_review = (raw_status == "??") or (worktree_status ~= " ")
+
+      if needs_review then
+        local display_status = (raw_status == "??") and "??" or worktree_status
+        table.insert(items, {
+          status = display_status,
+          rel_path = rel_path,
+          full_path = full_path,
+        })
+      end
+    end
+  end
+
+  return items, git_root
+end
+
+local function git_status(target)
+  target = target or "current"
+  local items = get_git_status_items()
+  if not items then
+    return
+  end
+
+  if #items == 0 then
+    vim.notify("Tất cả file đã được review xong (đã stage hết)!", vim.log.levels.INFO)
+    return
+  end
+
+  open_select_picker({
+    prompt = ("Cần Review (%d)"):format(#items),
+    items = items,
+    format_item = function(item)
+      return ("%-5s %s"):format("[" .. item.status .. "]", item.rel_path)
+    end,
+    on_select = function(item)
+      if item.status:find("D") and vim.fn.filereadable(item.full_path) == 0 then
+        vim.notify("File đã bị xoá: " .. item.rel_path, vim.log.levels.WARN)
+        return
+      end
+      open_file(item.full_path, target)
+    end,
+  })
+end
+
+local function open_modified_in_tabs()
+  local items, git_root = get_git_status_items()
+  if not items then
+    return
+  end
+
+  local files = {}
+  for _, item in ipairs(items) do
+    if not item.status:find("D") and vim.fn.filereadable(item.full_path) == 1 then
+      table.insert(files, item.full_path)
+    end
+  end
+
+  if #files == 0 then
+    vim.notify("Không còn file nào cần review (đã stage hết)!", vim.log.levels.INFO)
+    return
+  end
+
+  if #files > 8 then
+    local choice = vim.fn.confirm(
+      ("Có %d file bị sửa đổi, bạn có chắc muốn mở tất cả vào %d tabs không?"):format(#files, #files),
+      "&Yes\n&No",
+      1
+    )
+    if choice ~= 1 then
+      return
+    end
+  end
+
+  local existing_tab_files = {}
+  for _, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
+      local bufnr = vim.api.nvim_win_get_buf(win)
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        local name = vim.fs.normalize(vim.api.nvim_buf_get_name(bufnr))
+        if name ~= "" then
+          existing_tab_files[name] = tabpage
+        end
+      end
+    end
+  end
+
+  local cur_buf = vim.api.nvim_get_current_buf()
+  local is_cur_empty = vim.api.nvim_buf_get_name(cur_buf) == ""
+    and vim.api.nvim_buf_line_count(cur_buf) <= 1
+    and vim.api.nvim_buf_get_lines(cur_buf, 0, 1, false)[1] == ""
+
+  local first_tab
+  for i, file in ipairs(files) do
+    local norm = vim.fs.normalize(file)
+    if existing_tab_files[norm] then
+      if not first_tab then
+        first_tab = existing_tab_files[norm]
+      end
+    else
+      if i == 1 and is_cur_empty then
+        vim.cmd.edit(vim.fn.fnameescape(file))
+        first_tab = vim.api.nvim_get_current_tabpage()
+      else
+        vim.cmd("tabnew " .. vim.fn.fnameescape(file))
+        if not first_tab then
+          first_tab = vim.api.nvim_get_current_tabpage()
+        end
+      end
+    end
+  end
+
+  if first_tab and vim.api.nvim_tabpage_is_valid(first_tab) then
+    vim.api.nvim_set_current_tabpage(first_tab)
+  end
+
+  vim.notify(("Đã mở %d file bị sửa đổi vào các tab"):format(#files), vim.log.levels.INFO)
+end
+
 local function sanitize_grep_text(value)
   if type(value) ~= "string" then
     return value
@@ -436,6 +621,44 @@ return {
           help_tags("split")
         end,
         desc = "Vsplit and help tags",
+      },
+      {
+        "<leader>gm",
+        function()
+          git_status("current")
+        end,
+        desc = "Git modified files",
+      },
+      {
+        "<leader>gs",
+        function()
+          git_status("current")
+        end,
+        desc = "Git status",
+      },
+      {
+        "<leader>tgm",
+        function()
+          git_status("tab")
+        end,
+        desc = "New tab and git modified files",
+      },
+      {
+        "<leader>sgm",
+        function()
+          git_status("split")
+        end,
+        desc = "Vsplit and git modified files",
+      },
+      {
+        "<leader>to",
+        open_modified_in_tabs,
+        desc = "Open all modified files in tabs",
+      },
+      {
+        "<leader>ta",
+        open_modified_in_tabs,
+        desc = "Open all modified files in tabs",
       },
     },
     opts = {

@@ -6,6 +6,9 @@ return {
       "nvim-treesitter/nvim-treesitter",
       "nvim-tree/nvim-web-devicons",
     },
+    keys = {
+      { "<leader>mr", "<cmd>RenderMarkdown toggle<cr>", ft = "markdown", desc = "Toggle render markdown" },
+    },
     opts = {
       render_modes = true,
       html = { enabled = false },

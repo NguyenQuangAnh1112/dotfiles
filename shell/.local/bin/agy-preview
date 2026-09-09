@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+import os
+import glob
+import json
+import sys
+import subprocess
+
+def extract_latest_response():
+    brain_dir = os.path.expanduser("~/.gemini/antigravity-cli/brain")
+    transcripts = glob.glob(f"{brain_dir}/*/.system_generated/logs/transcript_full.jsonl")
+    if not transcripts:
+        transcripts = glob.glob(f"{brain_dir}/*/.system_generated/logs/transcript.jsonl")
+
+    if not transcripts:
+        print("[agy-preview] Không tìm thấy phiên làm việc nào của agy!", file=sys.stderr)
+        sys.exit(1)
+
+    latest_file = max(transcripts, key=os.path.getmtime)
+
+    last_content = None
+    with open(latest_file, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                d = json.loads(line)
+                if d.get("source") == "MODEL" and d.get("type") == "PLANNER_RESPONSE":
+                    content = d.get("content")
+                    if content and isinstance(content, str) and content.strip():
+                        last_content = content
+            except Exception:
+                pass
+
+    if not last_content:
+        print("[agy-preview] Chưa tìm thấy câu trả lời nào từ agy trong phiên gần nhất!", file=sys.stderr)
+        sys.exit(1)
+
+    out_dir = os.path.expanduser("~/.cache/agy")
+    os.makedirs(out_dir, exist_ok=True)
+    out_file = os.path.join(out_dir, "last_reply.md")
+
+    with open(out_file, "w", encoding="utf-8") as f:
+        f.write(last_content)
+
+    return out_file
+
+def main():
+    args = sys.argv[1:]
+    
+    if "--help" in args or "-h" in args:
+        print("Sử dụng: agy-preview [tùy chọn]")
+        print("Trích xuất câu trả lời mới nhất của agy và mở xem bằng Neovim markdown-preview.")
+        print()
+        print("Tùy chọn:")
+        print("  -e, --extract-only    Chỉ trích xuất ra file, không mở Neovim")
+        print("  -c, --cat             In trực tiếp nội dung Markdown ra màn hình")
+        print("  -h, --help            Hiển thị trợ giúp này")
+        return
+
+    out_file = extract_latest_response()
+
+    if "--extract-only" in args or "-e" in args:
+        print(out_file)
+        return
+
+    if "--cat" in args or "-c" in args:
+        with open(out_file, "r", encoding="utf-8") as f:
+            sys.stdout.write(f.read())
+        return
+
+    # Mở Neovim và tự động kích hoạt MarkdownPreview
+    os.execvp("nvim", ["nvim", "-c", "MarkdownPreview", out_file])
+
+if __name__ == "__main__":
+    main()

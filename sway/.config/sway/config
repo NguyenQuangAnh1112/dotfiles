@@ -5,7 +5,7 @@
 ### Variables
 set $mod Mod4
 set $term kitty
-set $menu wofi --show drun --insensitive --prompt "Search..."
+set $menu sh -c 'command -v rofi >/dev/null 2>&1 && exec rofi -show drun -show-icons || exec wofi --show drun --insensitive --prompt "Search..."'
 
 ### Appearance
 font pango:monospace 10
@@ -15,6 +15,7 @@ default_floating_border normal 2
 smart_borders on
 hide_edge_borders smart
 focus_follows_mouse yes
+mouse_warping output
 floating_modifier $mod
 
 # class                 border  bground text    indicator child_border
@@ -27,17 +28,32 @@ client.urgent           #eb6f92 #eb6f92 #ffffff #eb6f92   #eb6f92
 output * bg /home/muggle/Pictures/bg/japan-artistic-3840x2160-25406.jpg fill
 
 # Màn phụ (màn rời 27" 2K 100Hz) bên trái
-output HDMI-A-5 pos 0 0 mode 2560x1440@100Hz
+output HDMI-A-5 {
+    mode 2560x1440@100Hz
+    pos 0 0
+    subpixel rgb
+    adaptive_sync off
+}
 
-# Màn chính (Laptop 15.6" FHD 144Hz) bên phải
-output eDP-1 pos 2560 0 mode 1920x1080@144Hz
+# Màn chính (Laptop 15.6" FHD 144Hz) bên phải (căn đáy bằng với màn phụ: 1440 - 1080 = 360)
+output eDP-1 {
+    mode 1920x1080@144Hz
+    pos 2560 360
+    subpixel rgb
+    adaptive_sync off
+}
 
 ### Input configuration
 input "type:touchpad" {
-    dwt enabled
+    dwt disabled
     tap enabled
     natural_scroll enabled
     middle_emulation enabled
+}
+
+input "type:pointer" {
+    accel_profile "flat"
+    pointer_accel 0
 }
 
 input "type:keyboard" {
@@ -50,8 +66,12 @@ input "type:keyboard" {
 #     timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
 #     before-sleep 'swaylock -f -c 000000'
 
+### Cursor Theme
+seat * xcursor_theme Bibata-Modern-Ice 28
+exec ~/.config/sway/scripts/ensure-bibata-cursor.sh
+
 ### Autostart
-exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway && systemctl --user start sway-session.target
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway XCURSOR_THEME XCURSOR_SIZE && systemctl --user start sway-session.target
 exec_always sh -c 'command -v fcitx5 >/dev/null 2>&1 && fcitx5 -d'
 exec_always sh -c 'command -v mako >/dev/null 2>&1 && mako'
 exec ~/.config/i3/start-polkit-agent.sh
@@ -72,11 +92,11 @@ bindsym $mod+Shift+s exec grim -g "$(slurp)" - | wl-copy && notify-send "Screens
 # Screenshot entire screen
 bindsym Print exec grim - | wl-copy && notify-send "Screenshot" "Đã chụp toàn màn hình vào clipboard"
 
-### Navigation (Vim keys)
-bindsym $mod+h focus left
-bindsym $mod+j focus down
-bindsym $mod+k focus up
-bindsym $mod+l focus right
+### Navigation (Vim keys — smart cross-output)
+bindsym $mod+h exec ~/.config/sway/scripts/focus-smart.sh left
+bindsym $mod+j exec ~/.config/sway/scripts/focus-smart.sh down
+bindsym $mod+k exec ~/.config/sway/scripts/focus-smart.sh up
+bindsym $mod+l exec ~/.config/sway/scripts/focus-smart.sh right
 
 
 ### Window Movement
@@ -95,8 +115,7 @@ bindsym $mod+backslash layout toggle split
 bindsym $mod+m layout tabbed
 bindsym $mod+minus layout stacking
 bindsym $mod+Shift+f fullscreen toggle
-bindsym $mod+Shift+space floating toggle
-bindsym $mod+space focus mode_toggle
+bindsym $mod+space floating toggle
 
 ### Workspaces
 # Màn chính (eDP-1): 1, 2, 3, 4, 5
@@ -190,15 +209,23 @@ bindsym $mod+Right exec brightnessctl set +10%
 bindsym $mod+Left exec brightnessctl set 10%-
 
 ### Window Rules (Unity Engine & Dialogs)
+# Unity Hub → workspace F1
 assign [class="^(?i)unityhub$"] workspace number $wsF1
 assign [app_id="^(?i)unityhub$"] workspace number $wsF1
-assign [class="^(?i)(unity|unityeditor)$"] workspace number $wsF1
-assign [app_id="^(?i)(unity|unityeditor)$"] workspace number $wsF1
 
-for_window [class="^(?i)(unity|unityeditor)$" window_type="dialog"] floating enable, move position center, focus
-for_window [class="^(?i)(unity|unityeditor)$" window_type="utility"] floating enable, move position center, focus
-for_window [class="^(?i)(unity|unityeditor)$" window_type="toolbar"] floating enable, move position center, focus
-for_window [class="^(?i)(unity|unityeditor)$" window_role="pop-up"] floating enable, move position center, focus
+# Unity Editor → workspace F1
+assign [class="^Unity\.bin$"] workspace number $wsF1
+
+# --- Inverted float logic ---
+# 1) Float ALL Unity.bin windows by default (popups, dialogs, sub-windows)
+for_window [class="^Unity\.bin$"] floating enable, move position center
+
+# 2) Tile back ONLY the main editor window (title starts with "Unity - ")
+for_window [class="^Unity\.bin$" title="^Unity - .+ - Unity"] floating disable
+
+# Rofi window rules
+for_window [app_id="(?i)rofi"] floating enable, border none
+for_window [class="(?i)rofi"] floating enable, border none
 
 ### Session Controls
 bindsym $mod+Shift+c reload

@@ -1,7 +1,13 @@
 return {
   "vimpostor/vim-tpipeline",
   lazy = false,
+  cond = function()
+    return vim.env.TMUX ~= nil and vim.env.TMUX ~= ""
+  end,
   init = function()
+    if not vim.env.TMUX or vim.env.TMUX == "" then
+      return
+    end
     vim.g.tpipeline_tabline = 1
     -- Keep the tabline visible when the terminal/tmux pane loses focus.
     vim.g.tpipeline_focuslost = 0
@@ -14,6 +20,9 @@ return {
     }
   end,
   config = function()
+    if not vim.env.TMUX or vim.env.TMUX == "" then
+      return
+    end
     local group = vim.api.nvim_create_augroup("user-tpipeline-tabline", { clear = true })
 
     local function ensure_tpipeline_ready()

@@ -31,6 +31,7 @@ local plugin_specs = {
 	"mini",
 	"oil",
 	"progress",
+	"markdown-preview",
 	"render-markdown",
 	"tabby",
 	"tmux-navigator",

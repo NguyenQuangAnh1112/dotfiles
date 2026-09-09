@@ -104,6 +104,8 @@ if [[ -o interactive ]]; then
 
   alias ud='sudo dnf update'
 
+  alias ff='fastfetch'
+
 fi
 
 ########################
@@ -215,7 +217,11 @@ export CUDA_HOME=/usr/local/cuda-13.2
 # YAZI
 ########################
 
-function yazi() {
+# y: mở yazi thông thường
+alias y="command yazi"
+
+# yz: mở yazi và cd theo thư mục khi thoát
+function yz() {
   local tmp cwd
   tmp="$(mktemp -t yazi-cwd.XXXXXX)"
   command yazi --cwd-file="$tmp" "$@"
@@ -225,8 +231,12 @@ function yazi() {
   rm -f -- "$tmp"
 }
 
-alias y=yazi
-alias yy=yazi
+########################
+# AGY (ANTIGRAVITY)
+########################
+
+alias agyp="agy-preview"
+alias agyl="agy-preview"
 
 ########################
 # INPUT METHOD (VIETNAMESE)
