@@ -54,13 +54,67 @@ local function find_godot_project_root(file_dir)
 	end
 end
 
+local runner_tabpage
+local runner_job_id
+
 local function open_command_in_new_tab(command, cwd)
+	vim.cmd("silent! wall")
+
+	if runner_tabpage and vim.api.nvim_tabpage_is_valid(runner_tabpage) then
+		if runner_job_id then
+			pcall(vim.fn.jobstop, runner_job_id)
+		end
+		local tab_nr = vim.api.nvim_tabpage_get_number(runner_tabpage)
+		pcall(vim.cmd, tab_nr .. "tabclose!")
+	end
+
 	local shell = vim.env.SHELL or vim.o.shell
 	local shell_command = ("%s; exec %s -i"):format(command, vim.fn.shellescape(shell))
 
 	vim.cmd("tabnew")
-	vim.fn.termopen({ shell, "-ic", shell_command }, { cwd = cwd })
+	runner_tabpage = vim.api.nvim_get_current_tabpage()
+	runner_job_id = vim.fn.termopen({ shell, "-ic", shell_command }, { cwd = cwd })
 	vim.cmd("startinsert")
+end
+
+local function find_cmake_project_root(file_dir)
+	local matches = vim.fs.find("CMakeLists.txt", { path = file_dir, upward = true, limit = math.huge, type = "file" })
+	if #matches == 0 then
+		return nil, nil
+	end
+	for i = #matches, 1, -1 do
+		local f = io.open(matches[i], "r")
+		if f then
+			local content = f:read("*a")
+			f:close()
+			if content:match("project%s*%(") then
+				return vim.fs.dirname(matches[i]), matches[i]
+			end
+		end
+	end
+	return vim.fs.dirname(matches[1]), matches[1]
+end
+
+local function get_cmake_targets(cmakelists_path)
+	local f = io.open(cmakelists_path, "r")
+	if not f then
+		return {}
+	end
+	local content = f:read("*a")
+	f:close()
+
+	local project_name = content:match("project%s*%([%s\n]*([%w_%-]+)")
+	content = content:gsub("#[^\n]*", "")
+
+	local targets = {}
+	for target in content:gmatch("add_executable%s*%([%s\n]*([%w_%-${}]+)") do
+		if target == "${PROJECT_NAME}" and project_name then
+			table.insert(targets, project_name)
+		elseif not target:find("%$") then
+			table.insert(targets, target)
+		end
+	end
+	return targets
 end
 
 local function replace_in_selection()
@@ -172,16 +226,113 @@ local function run_current_file_in_new_tab()
 		return
 	end
 
-	local uv_executable = find_available_executable({ "uv" })
-	if not uv_executable then
-		vim.notify("Could not find 'uv' executable", vim.log.levels.ERROR)
+	if vim.bo.filetype == "cpp" or vim.bo.filetype == "c" then
+		local cmake_root, cmakelists = find_cmake_project_root(file_dir)
+
+		if cmake_root and cmakelists then
+			local cmake_bin = find_available_executable({ "cmake" })
+			if not cmake_bin then
+				vim.notify("Could not find 'cmake' executable", vim.log.levels.ERROR)
+				return
+			end
+
+			local targets = get_cmake_targets(cmakelists)
+			if #targets == 0 then
+				local build_files = vim.fn.globpath(cmake_root .. "/build", "*", false, true)
+				for _, f in ipairs(build_files) do
+					if vim.fn.executable(f) == 1 and vim.fn.isdirectory(f) == 0 then
+						table.insert(targets, vim.fs.basename(f))
+					end
+				end
+			end
+
+			local ninja_bin = find_available_executable({ "ninja" })
+			local gen_flag = ninja_bin and "-G Ninja" or ""
+
+			local function run_target(target)
+				local cmd = ("([ -f build/CMakeCache.txt ] || %s -B build %s -DCMAKE_EXPORT_COMPILE_COMMANDS=ON) && "
+					.. "%s --build build --parallel --target %s && "
+					.. "([ -e compile_commands.json ] || [ ! -f build/compile_commands.json ] || ln -sf build/compile_commands.json .) && "
+					.. "( [ -f ./build/bin/%s ] && ./build/bin/%s || ./build/%s )"):format(
+					vim.fn.shellescape(cmake_bin),
+					gen_flag,
+					vim.fn.shellescape(cmake_bin),
+					vim.fn.shellescape(target),
+					vim.fn.shellescape(target),
+					vim.fn.shellescape(target),
+					vim.fn.shellescape(target)
+				)
+				open_command_in_new_tab(cmd, cmake_root)
+			end
+
+			if #targets == 1 then
+				run_target(targets[1])
+			elseif #targets > 1 then
+				local stem = vim.fn.fnamemodify(file_path, ":t:r")
+				if vim.tbl_contains(targets, stem) then
+					run_target(stem)
+				else
+					vim.ui.select(targets, { prompt = "Select CMake target to run:" }, function(choice)
+						if choice then
+							run_target(choice)
+						end
+					end)
+				end
+			else
+				local cmd = ("([ -f build/CMakeCache.txt ] || %s -B build %s -DCMAKE_EXPORT_COMPILE_COMMANDS=ON) && "
+					.. "%s --build build --parallel"):format(
+					vim.fn.shellescape(cmake_bin),
+					gen_flag,
+					vim.fn.shellescape(cmake_bin)
+				)
+				open_command_in_new_tab(cmd, cmake_root)
+			end
+			return
+		end
+
+		local ext = vim.fn.fnamemodify(file_path, ":e")
+		if ext == "h" or ext == "hpp" then
+			vim.notify("Cannot run a standalone header file directly", vim.log.levels.WARN)
+			return
+		end
+
+		local file_stem = vim.fn.fnamemodify(file_path, ":t:r")
+		local out_bin = "./" .. file_stem
+		local compiler = vim.bo.filetype == "cpp" and find_available_executable({ "g++", "clang++" })
+			or find_available_executable({ "gcc", "clang" })
+
+		if not compiler then
+			vim.notify("No C/C++ compiler found", vim.log.levels.ERROR)
+			return
+		end
+
+		local flags = vim.bo.filetype == "cpp" and "-std=c++23 -Wall -Wextra" or "-Wall -Wextra"
+		local cmd = ("%s %s %s -o %s && %s"):format(
+			vim.fn.shellescape(compiler),
+			flags,
+			vim.fn.shellescape(file_path),
+			vim.fn.shellescape(out_bin),
+			vim.fn.shellescape(out_bin)
+		)
+		open_command_in_new_tab(cmd, file_dir)
 		return
 	end
 
-	open_command_in_new_tab(
-		("%s run %s"):format(vim.fn.shellescape(uv_executable), vim.fn.shellescape(file_path)),
-		file_dir
-	)
+	if vim.bo.filetype == "python" then
+		local uv_executable = find_available_executable({ "uv" })
+		if not uv_executable then
+			vim.notify("Could not find 'uv' executable", vim.log.levels.ERROR)
+			return
+		end
+
+		open_command_in_new_tab(
+			("%s run %s"):format(vim.fn.shellescape(uv_executable), vim.fn.shellescape(file_path)),
+			file_dir
+		)
+		return
+	end
+
+	vim.notify("No runner configured for filetype: " .. (vim.bo.filetype ~= "" and vim.bo.filetype or "unknown"), vim.log.levels.WARN)
 end
 
 local function toggle_markdown_checkbox()
@@ -237,6 +388,37 @@ keymap("n", "<leader>\\", "<cmd>vsplit<CR><cmd>terminal<CR>", { desc = "Vsplit a
 keymap("n", "<leader>rr", run_current_file_in_new_tab, { desc = "Run file or Love project in new tab" })
 
 keymap("t", "<Esc>", "<C-\\><C-n>", { desc = "Terminal normal mode" })
+
+local function close_all_methods()
+	local bufnr = vim.api.nvim_get_current_buf()
+	local target_level = 1
+	local max_lines = math.min(40, vim.api.nvim_buf_line_count(bufnr))
+	for i = 1, max_lines do
+		local line = vim.fn.getline(i)
+		if line:match("^%s*namespace%s+") then
+			target_level = 2
+			break
+		end
+	end
+	vim.wo.foldlevel = target_level
+end
+
+keymap("n", "z<Space>", close_all_methods, { desc = "Close all methods (keep class open)" })
+
+local function smart_toggle_fold()
+	if vim.fn.foldclosed(".") ~= -1 then
+		pcall(vim.cmd, "normal! zO")
+	else
+		pcall(vim.cmd, "normal! zc")
+	end
+end
+
+keymap("n", "za", smart_toggle_fold, { desc = "Toggle fold (open recursively in one shot)" })
+
+keymap("x", "zf", function()
+	vim.opt_local.foldmethod = "manual"
+	vim.cmd("normal! zf")
+end, { desc = "Create manual fold from selection" })
 
 local checkbox_group = vim.api.nvim_create_augroup("user-markdown-checkbox", { clear = true })
 vim.api.nvim_create_autocmd("FileType", {

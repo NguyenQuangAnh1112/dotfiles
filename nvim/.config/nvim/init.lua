@@ -1,13 +1,12 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
-local config_path = vim.fn.stdpath("config")
-
-dofile(config_path .. "/config/options.lua")
-dofile(config_path .. "/config/keymaps.lua")
-dofile(config_path .. "/config/commands.lua")
-dofile(config_path .. "/config/fcitx5.lua")
-dofile(config_path .. "/config/lazy.lua")
+require("config.options")
+require("config.keymaps")
+require("config.commands")
+require("config.fcitx5")
+require("config.git_review")
+require("config.lazy")
 
 local function open_fff_on_start(directory)
 	vim.schedule(function()

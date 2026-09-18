@@ -16,7 +16,7 @@ return {
     vim.g.tpipeline_embedopts = {
       "status-left-length 200",
       "status-left '#(cat #{socket_path}-\\#{session_id}-vimbridge)'",
-      "status-right '#{E:@status-right-sessions}'",
+      "status-right ''",
     }
   end,
   config = function()

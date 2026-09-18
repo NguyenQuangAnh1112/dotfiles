@@ -98,7 +98,7 @@ return {
       },
       completion = {
         trigger = {
-          prefetch_on_insert = true,
+          prefetch_on_insert = false,
         },
         list = {
           max_items = 8,
@@ -149,9 +149,14 @@ return {
             name = "LSP",
             async = true,
             transform_items = function(_, items)
-              items = vim.tbl_filter(function(item)
-                return item.kind ~= require("blink.cmp.types").CompletionItemKind.Text
-              end, items)
+              local ok, types = pcall(require, "blink.cmp.types")
+              local text_kind = ok and types.CompletionItemKind and types.CompletionItemKind.Text or nil
+
+              if text_kind then
+                items = vim.tbl_filter(function(item)
+                  return item.kind ~= text_kind
+                end, items)
+              end
 
               return dedupe_completion_items(items)
             end,
@@ -212,20 +217,47 @@ return {
     config = function(_, opts)
       require("blink.cmp").setup(opts)
 
+      -- Map CompletionItemKind → standard treesitter/syntax groups (works with any colorscheme)
+      local kind_hl_map = {
+        Text = "Comment",
+        Method = "Function",
+        Function = "Function",
+        Constructor = "@constructor",
+        Field = "@variable.member",
+        Variable = "@variable",
+        Class = "Type",
+        Interface = "Type",
+        Module = "@module",
+        Property = "@property",
+        Unit = "Number",
+        Value = "String",
+        Enum = "Type",
+        Keyword = "Keyword",
+        Snippet = "Conceal",
+        Color = "Special",
+        File = "Directory",
+        Reference = "@markup.link",
+        Folder = "Directory",
+        EnumMember = "Constant",
+        Constant = "Constant",
+        Struct = "Type",
+        Event = "Special",
+        Operator = "Operator",
+        TypeParameter = "Type",
+      }
+
       local function set_blink_hl()
-        local popup_groups = {
+        -- 1. Transparent background for blink popup groups only (Pmenu* handled by colorscheme)
+        local transparent_groups = {
           "BlinkCmpMenu",
           "BlinkCmpMenuBorder",
           "BlinkCmpDoc",
           "BlinkCmpDocBorder",
           "BlinkCmpSignatureHelp",
           "BlinkCmpSignatureHelpBorder",
-          "Pmenu",
-          "PmenuKind",
-          "PmenuExtra",
-          "PmenuSbar",
+          "BlinkCmpScrollBarGutter",
         }
-        for _, g in ipairs(popup_groups) do
+        for _, g in ipairs(transparent_groups) do
           local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = g, link = false })
           if ok then
             hl.bg = "NONE"
@@ -234,29 +266,53 @@ return {
           end
         end
 
-        local ok_types, types = pcall(require, "blink.cmp.types")
-        if ok_types and types.CompletionItemKind then
-          vim.api.nvim_set_hl(0, "BlinkCmpKind", { link = "CmpItemKind" })
-          for _, kind in ipairs(types.CompletionItemKind) do
-            vim.api.nvim_set_hl(0, "BlinkCmpKind" .. kind, { link = "CmpItemKind" .. kind })
-          end
+        -- 2. Selection — derive from Visual (immune to transparent overrides)
+        local visual = vim.api.nvim_get_hl(0, { name = "Visual", link = false })
+        local sel_bg = visual and visual.bg
+        if not sel_bg then
+          local cursor_line = vim.api.nvim_get_hl(0, { name = "CursorLine", link = false })
+          sel_bg = cursor_line and cursor_line.bg
+        end
+        vim.api.nvim_set_hl(0, "BlinkCmpMenuSelection", { bg = sel_bg, bold = true, nocombine = true })
+
+        -- Selection border accent — derive from Function highlight
+        local func_hl = vim.api.nvim_get_hl(0, { name = "Function", link = false })
+        vim.api.nvim_set_hl(0, "BlinkCmpMenuSelectionBorder", {
+          fg = func_hl and func_hl.fg,
+          bg = "NONE",
+          bold = true,
+        })
+
+        -- 3. Kind icons — link to universal treesitter/syntax groups
+        vim.api.nvim_set_hl(0, "BlinkCmpKind", { link = "Type" })
+        for kind, hl_group in pairs(kind_hl_map) do
+          vim.api.nvim_set_hl(0, "BlinkCmpKind" .. kind, { link = hl_group })
         end
 
-        vim.api.nvim_set_hl(0, "PmenuSel", { fg = "#ffffff", bg = "#2D4F67", bold = true, nocombine = true })
-        vim.api.nvim_set_hl(0, "BlinkCmpMenuSelection", { fg = "#ffffff", bg = "#2D4F67", bold = true, nocombine = true })
-        vim.api.nvim_set_hl(0, "BlinkCmpMenuSelectionBorder", { fg = "#7FB4CA", bg = "NONE", bold = true })
-        vim.api.nvim_set_hl(0, "BlinkCmpLabelMatch", { link = "CmpItemAbbrMatch" })
+        -- 4. Label match (fuzzy matched chars)
+        vim.api.nvim_set_hl(0, "BlinkCmpLabelMatch", { link = "Special" })
+
+        -- Label detail, description, source
         vim.api.nvim_set_hl(0, "BlinkCmpLabelDetail", { link = "Comment" })
         vim.api.nvim_set_hl(0, "BlinkCmpLabelDescription", { link = "Comment" })
-        vim.api.nvim_set_hl(0, "BlinkCmpSource", { link = "CmpItemMenu" })
+        vim.api.nvim_set_hl(0, "BlinkCmpSource", { link = "NonText" })
+
+        -- 5. Deprecated items — strikethrough with Comment color
+        local comment_hl = vim.api.nvim_get_hl(0, { name = "Comment", link = false })
+        vim.api.nvim_set_hl(0, "BlinkCmpLabelDeprecated", {
+          fg = comment_hl and comment_hl.fg,
+          strikethrough = true,
+        })
+
+        -- Scrollbar & ghost text
+        vim.api.nvim_set_hl(0, "BlinkCmpScrollBarThumb", { link = "PmenuThumb" })
+        vim.api.nvim_set_hl(0, "BlinkCmpGhostText", { link = "Comment" })
       end
 
       set_blink_hl()
 
-      local group = vim.api.nvim_create_augroup("user-blink-selection-hl", { clear = true })
-
       vim.api.nvim_create_autocmd("ColorScheme", {
-        group = group,
+        group = vim.api.nvim_create_augroup("user-blink-selection-hl", { clear = true }),
         callback = function()
           vim.schedule(set_blink_hl)
         end,

@@ -1,8 +1,11 @@
 return {
   "nanozuki/tabby.nvim",
-  event = "VimEnter",
+  event = { "BufReadPre", "BufNewFile", "VimEnter" },
 
   config = function()
+    if not vim.env.TMUX or vim.env.TMUX == "" then
+      vim.o.showtabline = 2
+    end
     -- Cài đặt màu nền trong suốt (NONE) và màu chữ giống hệt tmux.conf
     vim.api.nvim_set_hl(0, "TmuxLikeFill", { bg = "NONE" })
     vim.api.nvim_set_hl(0, "TmuxLikeTab", { fg = "#9a9a9a", bg = "NONE" })
@@ -27,5 +30,6 @@ return {
         hl = theme.fill,
       }
     end)
+    require("tabby.tabline").init()
   end,
 }

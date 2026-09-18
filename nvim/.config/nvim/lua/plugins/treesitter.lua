@@ -1,32 +1,18 @@
 return {
   {
     "nvim-treesitter/nvim-treesitter",
-    lazy = false,
+    event = { "BufReadPost", "BufNewFile" },
     build = ":TSUpdate",
     config = function()
       local ts = require("nvim-treesitter")
-      local languages = {
-        "c_sharp",
-        "gdscript",
-        "gdshader",
-        "godot_resource",
-        "lua",
-        "vim",
-        "vimdoc",
-        "python",
-        "markdown",
-        "markdown_inline",
-      }
 
       ts.setup()
-
-      if vim.fn.executable("tree-sitter") == 1 then
-        ts.install(languages)
-      end
 
       vim.api.nvim_create_autocmd("FileType", {
         pattern = {
           "cs",
+          "c",
+          "cpp",
           "gdscript",
           "gdshader",
           "gdresource",
@@ -49,7 +35,7 @@ return {
   {
     "nvim-treesitter/nvim-treesitter-textobjects",
     branch = "main",
-    lazy = false,
+    event = { "BufReadPost", "BufNewFile" },
     dependencies = { "nvim-treesitter/nvim-treesitter" },
     config = function()
       require("nvim-treesitter-textobjects").setup({
@@ -77,19 +63,19 @@ return {
         move.goto_previous_end("@function.outer", "textobjects")
       end, { desc = "Previous function end" })
 
-      keymap({ "n", "x", "o" }, "]c", function()
+      keymap({ "n", "x", "o" }, "]k", function()
         move.goto_next_start("@class.outer", "textobjects")
       end, { desc = "Next class start" })
 
-      keymap({ "n", "x", "o" }, "]C", function()
+      keymap({ "n", "x", "o" }, "]K", function()
         move.goto_next_end("@class.outer", "textobjects")
       end, { desc = "Next class end" })
 
-      keymap({ "n", "x", "o" }, "[c", function()
+      keymap({ "n", "x", "o" }, "[k", function()
         move.goto_previous_start("@class.outer", "textobjects")
       end, { desc = "Previous class start" })
 
-      keymap({ "n", "x", "o" }, "[C", function()
+      keymap({ "n", "x", "o" }, "[K", function()
         move.goto_previous_end("@class.outer", "textobjects")
       end, { desc = "Previous class end" })
     end,

@@ -91,6 +91,26 @@
       "}"
     ]
   },
+  "Unity OnDisable Method": {
+    "prefix": ["odis", "ondisable", "dis", "od"],
+    "description": "OnDisable lifecycle method",
+    "body": [
+      "private void OnDisable()",
+      "{",
+      "    ${1}",
+      "}"
+    ]
+  },
+  "Unity OnEnable Method": {
+    "prefix": ["oe", "onenable", "oen1"],
+    "description": "OnEnable lifecycle method",
+    "body": [
+      "private void OnEnable()",
+      "{",
+      "    ${1}",
+      "}"
+    ]
+  },
   "Unity Enable Disable Pair": {
     "prefix": "oen",
     "description": "OnEnable and OnDisable methods",
@@ -103,6 +123,16 @@
       "private void OnDisable()",
       "{",
       "    ${2}",
+      "}"
+    ]
+  },
+  "Unity OnDestroy Method": {
+    "prefix": ["odes", "ondestroy", "des"],
+    "description": "OnDestroy lifecycle method",
+    "body": [
+      "private void OnDestroy()",
+      "{",
+      "    ${1}",
       "}"
     ]
   },
@@ -182,7 +212,7 @@
     "prefix": "sg",
     "description": "Simple MonoBehaviour singleton",
     "body": [
-      "public static ${1:${TM_FILENAME_BASE}} Instance { get; private set; }",
+      "public static ${TM_FILENAME_BASE} Instance { get; private set; }",
       "",
       "private void Awake()",
       "{",
@@ -193,7 +223,7 @@
       "    }",
       "",
       "    Instance = this;",
-      "    ${2:DontDestroyOnLoad(gameObject);}",
+      "    ${1:DontDestroyOnLoad(gameObject);}",
       "}"
     ]
   },
@@ -208,7 +238,26 @@
     "prefix": "slt",
     "description": "Singleton property declaration only",
     "body": [
-      "public static ${1:${TM_FILENAME_BASE}} Instance { get; private set; }"
+      "public static ${TM_FILENAME_BASE} Instance { get; private set; }$0"
+    ]
+  },
+  "Unity DeltaTime": {
+    "prefix": "dt",
+    "description": "Time.deltaTime",
+    "body": [
+      "Time.deltaTime"
+    ]
+  },
+  "Unity MonoBehaviour Template": {
+    "prefix": "mono",
+    "description": "MonoBehaviour class template with current filename",
+    "body": [
+      "using UnityEngine;",
+      "",
+      "public class ${TM_FILENAME_BASE} : MonoBehaviour",
+      "{",
+      "    $0",
+      "}"
     ]
   }
 }

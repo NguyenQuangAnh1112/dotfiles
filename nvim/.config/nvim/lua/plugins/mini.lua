@@ -7,7 +7,6 @@ return {
       local indentscope = require("mini.indentscope")
 
       require("mini.ai").setup()
-      require("mini.comment").setup()
       indentscope.setup({
         draw = {
           delay = 0,
@@ -33,20 +32,34 @@ return {
         },
       })
 
+      local pick = require("mini.pick")
+      pick.setup({
+        window = {
+          config = {
+            border = "rounded",
+          },
+        },
+      })
+      vim.ui.select = pick.ui_select
+
       local diff = require("mini.diff")
       diff.setup({
         view = {
           style = "sign",
           signs = {
-            add = "▎",
-            change = "▎",
-            delete = "",
+            add = "",
+            change = "",
+            delete = "",
           },
         },
         options = {
           wrap_goto = true,
         },
       })
+
+      vim.api.nvim_set_hl(0, "MiniDiffSignAdd", {})
+      vim.api.nvim_set_hl(0, "MiniDiffSignChange", {})
+      vim.api.nvim_set_hl(0, "MiniDiffSignDelete", {})
 
       -- Hỗ trợ hiển thị diff cho file mới tinh (untracked)
       local function setup_untracked_diff(buf)
@@ -81,9 +94,11 @@ return {
       end
 
       local untracked_group = vim.api.nvim_create_augroup("user-mini-diff-untracked", { clear = true })
-      vim.api.nvim_create_autocmd({ "BufEnter", "BufReadPost", "BufNewFile" }, {
+      vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
         group = untracked_group,
         callback = function(args)
+          if vim.b[args.buf].minidiff_checked then return end
+          vim.b[args.buf].minidiff_checked = true
           setup_untracked_diff(args.buf)
         end,
       })

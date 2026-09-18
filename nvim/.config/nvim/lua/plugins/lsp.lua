@@ -44,11 +44,8 @@ end
 
 return {
   {
-    "LuaCATS/love2d",
-    lazy = true,
-  },
-  {
     "williamboman/mason.nvim",
+    cmd = { "Mason", "MasonInstall", "MasonUpdate", "MasonLog", "MasonUninstall" },
     opts = {
       registries = {
         "github:mason-org/mason-registry",
@@ -66,6 +63,7 @@ return {
       ensure_installed = {
         "pyrefly",
         "lua_ls",
+        "clangd",
       },
       automatic_installation = true,
       automatic_enable = false,
@@ -73,6 +71,7 @@ return {
   },
   {
     "WhoIsSethDaniel/mason-tool-installer.nvim",
+    event = "VeryLazy",
     dependencies = {
       "williamboman/mason.nvim",
       "williamboman/mason-lspconfig.nvim",
@@ -98,6 +97,7 @@ return {
   },
   {
     "neovim/nvim-lspconfig",
+    event = { "BufReadPre", "BufNewFile" },
     dependencies = {
       "saghen/blink.cmp",
     },
@@ -214,12 +214,16 @@ return {
         end
       end
 
-      local love2d_library = vim.fs.joinpath(vim.fn.stdpath("data"), "lazy", "love2d", "library")
       local godot_lsp_port = tonumber(vim.env.GDScript_Port) or 6005
       local godot_lsp_addr = ("127.0.0.1:%d"):format(godot_lsp_port)
       local godot_lsp_unavailable_notified = false
 
+      local cached_roslyn_cmd = nil
       local function get_roslyn_cmd()
+        if cached_roslyn_cmd then
+          return cached_roslyn_cmd
+        end
+
         local dotnet = vim.fn.expand("~/.dotnet/dotnet")
         if vim.fn.executable(dotnet) == 0 then
           dotnet = "dotnet"
@@ -236,7 +240,7 @@ return {
         })
 
         if dlls[1] then
-          return {
+          cached_roslyn_cmd = {
             dotnet,
             dlls[1],
             "--logLevel",
@@ -245,9 +249,11 @@ return {
             vim.fs.joinpath(vim.fn.stdpath("cache"), "roslyn_ls", "logs"),
             "--stdio",
           }
+        else
+          cached_roslyn_cmd = { "roslyn-language-server", "--stdio" }
         end
 
-        return { "roslyn-language-server", "--stdio" }
+        return cached_roslyn_cmd
       end
 
       local function is_godot_lsp_available()
@@ -296,6 +302,13 @@ return {
         end
       end
 
+      local roslyn_commands = pcall(require, "roslyn.lsp.commands") and require("roslyn.lsp.commands") or {}
+      local roslyn_handlers = pcall(require, "roslyn.lsp.handlers") and require("roslyn.lsp.handlers") or {}
+
+      for cmd_name, cmd_fn in pairs(roslyn_commands) do
+        vim.lsp.commands[cmd_name] = cmd_fn
+      end
+
       local servers = {
         pyrefly = {
           cmd = { "pyrefly", "lsp" },
@@ -321,6 +334,8 @@ return {
             DOTNET_CLI_TELEMETRY_OPTOUT = "1",
             DOTNET_MULTILEVEL_LOOKUP = "0",
           },
+          commands = roslyn_commands,
+          handlers = roslyn_handlers,
           settings = {
             ["csharp|background_analysis"] = {
               dotnet_analyzer_diagnostics_scope = "openFiles",
@@ -359,13 +374,12 @@ return {
                 version = "LuaJIT",
               },
               diagnostics = {
-                globals = { "vim", "love" },
+                globals = { "vim" },
               },
               workspace = {
                 checkThirdParty = false,
                 library = {
                   vim.env.VIMRUNTIME,
-                  love2d_library,
                 },
               },
               completion = {
@@ -376,6 +390,18 @@ return {
               },
             },
           },
+        },
+        clangd = {
+          cmd = {
+            "clangd",
+            "--background-index",
+            "--clang-tidy",
+            "--header-insertion=iwyu",
+            "--completion-style=detailed",
+            "--function-arg-placeholders",
+            "--fallback-style=llvm",
+          },
+          root_markers = { "compile_commands.json", "compile_flags.txt", "CMakeLists.txt", ".git" },
         },
       }
 
