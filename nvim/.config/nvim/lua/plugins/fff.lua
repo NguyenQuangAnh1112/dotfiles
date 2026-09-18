@@ -111,35 +111,39 @@ local function tabs()
   end)
 end
 
-local function sanitize_grep_text(value)
+local function sanitize_text(value)
   if type(value) ~= "string" then
     return value
   end
 
-  return value:gsub("%z", "")
+  return value:gsub("%z", ""):gsub("[\r\n]", " ")
 end
 
-local function patch_fff_grep_search()
-  local ok, grep = pcall(require, "fff.grep")
-  if not ok or grep._user_sanitize_nul_bytes then
+local function patch_fff_sanitizer()
+  local ok, list_renderer = pcall(require, "fff.picker_ui.list_renderer")
+  if not ok or list_renderer._user_sanitized then
     return
   end
 
-  local search = grep.search
-  grep.search = function(...)
-    local result = search(...)
-
-    for _, item in ipairs((result and result.items) or {}) do
-      item.name = sanitize_grep_text(item.name)
-      item.directory = sanitize_grep_text(item.directory)
-      item.relative_path = sanitize_grep_text(item.relative_path)
-      item.line_content = sanitize_grep_text(item.line_content)
+  local orig_render = list_renderer.render
+  list_renderer.render = function(ctx, list_buf, list_win, ns_id)
+    if ctx and ctx.items then
+      for _, item in ipairs(ctx.items) do
+        if item.name then
+          item.name = sanitize_text(item.name)
+        end
+        if item.relative_path then
+          item.relative_path = sanitize_text(item.relative_path)
+        end
+        if item.line_content then
+          item.line_content = sanitize_text(item.line_content)
+        end
+      end
     end
-
-    return result
+    return orig_render(ctx, list_buf, list_win, ns_id)
   end
 
-  grep._user_sanitize_nul_bytes = true
+  list_renderer._user_sanitized = true
 end
 
 local function live_grep()
@@ -290,7 +294,7 @@ return {
     },
     config = function(_, opts)
       require("fff").setup(opts)
-      patch_fff_grep_search()
+      patch_fff_sanitizer()
     end,
   },
 }
