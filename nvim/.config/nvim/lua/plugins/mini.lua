@@ -20,17 +20,21 @@ return {
       require("mini.pairs").setup()
       require("mini.surround").setup({
         mappings = {
-          add = "gsa",
-          delete = "gsd",
-          replace = "gsr",
-          find = "gsf",
-          find_left = "gsF",
-          highlight = "gsh",
-          update_n_lines = "gsn",
-          suffix_last = "l",
-          suffix_next = "n",
+          add = "ys",
+          delete = "ds",
+          find = "",
+          find_left = "",
+          highlight = "",
+          replace = "cs",
+          update_n_lines = "",
+          suffix_last = "",
+          suffix_next = "",
         },
+        search_method = "cover_or_next",
       })
+      vim.keymap.del("x", "ys")
+      vim.keymap.set("x", "S", [[:<C-u>lua MiniSurround.add("visual")<CR>]], { silent = true, desc = "Add surrounding" })
+      vim.keymap.set("n", "yss", "ys_", { remap = true, desc = "Add surrounding to line" })
 
       local pick = require("mini.pick")
       pick.setup({
