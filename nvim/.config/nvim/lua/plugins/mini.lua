@@ -6,7 +6,14 @@ return {
     config = function()
       local indentscope = require("mini.indentscope")
 
-      require("mini.ai").setup()
+      local ai = require("mini.ai")
+      ai.setup({
+        n_lines = 1000,
+        custom_textobjects = {
+          f = ai.gen_spec.treesitter({ a = "@function.outer", i = "@function.inner" }),
+          c = ai.gen_spec.treesitter({ a = "@class.outer", i = "@class.inner" }),
+        },
+      })
       indentscope.setup({
         draw = {
           delay = 0,
@@ -17,6 +24,18 @@ return {
           try_as_border = true,
         },
       })
+
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = { "oil", "aerial", "help", "lazy", "mason", "quickfix" },
+        callback = function()
+          vim.b.miniindentscope_disable = true
+        end,
+      })
+
+      local pick = require("mini.pick")
+      pick.setup()
+      vim.ui.select = pick.ui_select
+
       require("mini.pairs").setup()
       require("mini.surround").setup({
         mappings = {
@@ -36,16 +55,6 @@ return {
       vim.keymap.set("x", "S", [[:<C-u>lua MiniSurround.add("visual")<CR>]], { silent = true, desc = "Add surrounding" })
       vim.keymap.set("n", "yss", "ys_", { remap = true, desc = "Add surrounding to line" })
 
-      local pick = require("mini.pick")
-      pick.setup({
-        window = {
-          config = {
-            border = "rounded",
-          },
-        },
-      })
-      vim.ui.select = pick.ui_select
-
       local diff = require("mini.diff")
       diff.setup({
         view = {
@@ -60,10 +69,6 @@ return {
           wrap_goto = true,
         },
       })
-
-      vim.api.nvim_set_hl(0, "MiniDiffSignAdd", {})
-      vim.api.nvim_set_hl(0, "MiniDiffSignChange", {})
-      vim.api.nvim_set_hl(0, "MiniDiffSignDelete", {})
 
       local keymap = vim.keymap.set
 

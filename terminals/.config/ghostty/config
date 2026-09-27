@@ -1,39 +1,71 @@
-term = xterm-256color
+# ==============================================================================
+# GHOSTTY CONFIGURATION (OPTIMIZED FOR PERFORMANCE & SWAY/WAYLAND)
+# ==============================================================================
 
+# ------------------------------------------------------------------------------
+# 1. Performance & Process Lifecycle
+# ------------------------------------------------------------------------------
+# Chạy ở chế độ single-instance giúp mở cửa sổ/tab mới tức thì (<10ms)
+gtk-single-instance = true
+gtk-titlebar = false
+
+# ------------------------------------------------------------------------------
+# 2. Font & Typography
+# ------------------------------------------------------------------------------
 font-family = JetBrainsMono Nerd Font
-font-family-bold = JetBrainsMono Nerd Font
-font-family-italic = JetBrainsMono Nerd Font
-font-family-bold-italic = JetBrainsMono Nerd Font
-font-style = Regular
-font-style-bold = Bold
-font-style-italic = Italic
-font-style-bold-italic = Bold Italic
 font-size = 16
 adjust-font-baseline = 1
 adjust-cell-height = 1
 
-window-decoration = none
+# ------------------------------------------------------------------------------
+# 3. Theme & Colors (Đồng bộ với Neovim & Kitty)
+# ------------------------------------------------------------------------------
+theme = Zenbones Dark
+background = #000000
+background-opacity = 1
+background-blur = false
+
+# ------------------------------------------------------------------------------
+# 4. Window & Layout (Tối ưu cho Sway / Tiling WM)
+# ------------------------------------------------------------------------------
+window-decoration = false
 maximize = true
 window-padding-x = 0
 window-padding-y = 0
 window-padding-balance = true
+window-inherit-working-directory = true
+tab-inherit-working-directory = true
 
-background-opacity = 0.9
-background-opacity-cells = false
-background-blur = false
-background = #000000
-
-copy-on-select = clipboard
-
+# ------------------------------------------------------------------------------
+# 5. Cursor & Mouse
+# ------------------------------------------------------------------------------
 cursor-style = block
 cursor-style-blink = false
-
+cursor-click-to-move = true
 mouse-hide-while-typing = true
 mouse-scroll-multiplier = 3
 scrollback-limit = 100000
 
-# Keep Ghostty shell integration, but stop it from changing the cursor shape.
+# ------------------------------------------------------------------------------
+# 6. Clipboard & Notifications
+# ------------------------------------------------------------------------------
+copy-on-select = clipboard
+clipboard-read = allow
+clipboard-write = allow
+clipboard-trim-trailing-spaces = true
+app-notifications = no-clipboard-copy
+
+# ------------------------------------------------------------------------------
+# 7. Shell Integration
+# ------------------------------------------------------------------------------
+term = xterm-256color
+shell-integration = zsh
 shell-integration-features = no-cursor,no-sudo,title,no-ssh-env,no-ssh-terminfo,path
 
+# ------------------------------------------------------------------------------
+# 8. Keybindings
+# ------------------------------------------------------------------------------
 keybind = performable:ctrl+c=copy_to_clipboard
 keybind = ctrl+v=paste_from_clipboard
+keybind = shift+enter=text:\n
+keybind = ctrl+shift+r=reload_config

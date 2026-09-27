@@ -9,20 +9,15 @@ return {
       ts.setup()
 
       vim.api.nvim_create_autocmd("FileType", {
-        pattern = {
-          "cs",
-          "c",
-          "cpp",
-          "gdscript",
-          "gdshader",
-          "gdresource",
-          "lua",
-          "python",
-          "vim",
-          "help",
-          "markdown",
-        },
         callback = function(args)
+          local file_path = vim.api.nvim_buf_get_name(args.buf)
+          if file_path ~= "" then
+            local ok, stats = pcall(vim.uv.fs_stat, file_path)
+            if ok and stats and stats.size > 500 * 1024 then
+              return
+            end
+          end
+
           pcall(vim.treesitter.start, args.buf)
 
           if vim.bo[args.buf].filetype == "python" then

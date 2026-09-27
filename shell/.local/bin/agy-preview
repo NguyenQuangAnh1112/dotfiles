@@ -13,6 +13,11 @@ def extract_latest_response():
 
     if not transcripts:
         print("[agy-preview] Không tìm thấy phiên làm việc nào của agy!", file=sys.stderr)
+        try:
+            if sys.stdin.isatty():
+                input("\nNhấn Enter để đóng...")
+        except Exception:
+            pass
         sys.exit(1)
 
     latest_file = max(transcripts, key=os.path.getmtime)
@@ -34,6 +39,11 @@ def extract_latest_response():
 
     if not last_content:
         print("[agy-preview] Chưa tìm thấy câu trả lời nào từ agy trong phiên gần nhất!", file=sys.stderr)
+        try:
+            if sys.stdin.isatty():
+                input("\nNhấn Enter để đóng...")
+        except Exception:
+            pass
         sys.exit(1)
 
     out_dir = os.path.expanduser("~/.cache/agy")
@@ -50,9 +60,10 @@ def main():
     
     if "--help" in args or "-h" in args:
         print("Sử dụng: agy-preview [tùy chọn]")
-        print("Trích xuất câu trả lời mới nhất của agy và mở xem bằng Neovim markdown-preview.")
+        print("Trích xuất câu trả lời mới nhất của agy và mở xem bằng Neovim.")
         print()
         print("Tùy chọn:")
+        print("  -b, --browser         Mở bằng Neovim và kích hoạt MarkdownPreview trên trình duyệt")
         print("  -e, --extract-only    Chỉ trích xuất ra file, không mở Neovim")
         print("  -c, --cat             In trực tiếp nội dung Markdown ra màn hình")
         print("  -h, --help            Hiển thị trợ giúp này")
@@ -69,8 +80,11 @@ def main():
             sys.stdout.write(f.read())
         return
 
-    # Mở Neovim và tự động kích hoạt MarkdownPreview
-    os.execvp("nvim", ["nvim", "-c", "MarkdownPreview", out_file])
+    # Mở Neovim (render-markdown.nvim sẽ tự động render Markdown)
+    if "--browser" in args or "-b" in args:
+        os.execvp("nvim", ["nvim", "-c", "MarkdownPreview", out_file])
+    else:
+        os.execvp("nvim", ["nvim", out_file])
 
 if __name__ == "__main__":
     main()

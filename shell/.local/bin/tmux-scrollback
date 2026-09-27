@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# tmux-scrollback: Đưa scrollback buffer của tmux pane vào Neovim (như Zellij)
+# ==============================================================================
+
+set -euo pipefail
+
+target_pane="${1:-}"
+
+if [ -z "$target_pane" ]; then
+  if [ -n "${TMUX_PANE:-}" ]; then
+    target_pane="$TMUX_PANE"
+  else
+    target_pane="$(tmux display-message -p '#{pane_id}' 2>/dev/null || true)"
+  fi
+fi
+
+if [ -z "$target_pane" ]; then
+  echo "[tmux-scrollback] Lỗi: Không tìm thấy session/pane tmux nào!" >&2
+  exit 1
+fi
+
+tmp_file="$(mktemp -t tmux-scrollback.XXXXXX.log)"
+
+# Chụp toàn bộ lịch sử scrollback và màn hình hiện tại của pane
+tmux capture-pane -t "$target_pane" -S - -J -p > "$tmp_file"
+
+# Xoá bớt các dòng trống thừa ở cuối file
+sed -i -e :a -e '/^\n*$/{$d;N;};/\n$/ba' "$tmp_file" 2>/dev/null || true
+
+# Nếu được gọi từ tmux keybind (có truyền pane_id $1)
+if [ -n "${1:-}" ]; then
+  tmux split-window -t "$target_pane" -Z "sh -c 'trap \"rm -f \\\"$tmp_file\\\"\" EXIT INT TERM HUP; nvim +$ \"$tmp_file\"'"
+else
+  # Nếu được gọi trực tiếp từ terminal prompt
+  trap 'rm -f "$tmp_file"' EXIT INT TERM HUP
+  nvim +$ "$tmp_file"
+fi

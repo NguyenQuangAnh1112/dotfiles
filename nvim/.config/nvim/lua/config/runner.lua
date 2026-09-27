@@ -52,6 +52,24 @@ local function find_godot_project_root(file_dir)
 	end
 end
 
+local function find_unity_project_root(file_dir)
+	local matches = vim.fs.find("ProjectSettings", { path = file_dir, upward = true, type = "directory" })
+	if matches[1] then
+		return vim.fs.dirname(matches[1])
+	end
+	return nil
+end
+
+local function find_csharp_project(file_dir)
+	local matches = vim.fs.find(function(name)
+		return name:match("%.csproj$") or name:match("%.sln$")
+	end, { path = file_dir, upward = true, type = "file" })
+	if matches[1] then
+		return vim.fs.dirname(matches[1]), matches[1]
+	end
+	return nil, nil
+end
+
 local runner_tabpage
 local runner_job_id
 
@@ -274,6 +292,38 @@ function M.run()
 			("%s run %s"):format(vim.fn.shellescape(uv_executable), vim.fn.shellescape(file_path)),
 			file_dir
 		)
+		return
+	end
+
+	if vim.bo.filetype == "cs" then
+		local dotnet_bin = find_available_executable({ vim.fn.expand("~/.dotnet/dotnet"), "dotnet" })
+		if not dotnet_bin then
+			vim.notify("Could not find 'dotnet' executable", vim.log.levels.ERROR)
+			return
+		end
+
+		local unity_root = find_unity_project_root(file_dir)
+		if unity_root then
+			-- Unity scripts run inside Unity Editor. Run dotnet build to check for compile errors.
+			open_command_in_new_tab(
+				("%s build"):format(vim.fn.shellescape(dotnet_bin)),
+				unity_root
+			)
+			return
+		end
+
+		local proj_dir, proj_file = find_csharp_project(file_dir)
+		if proj_dir and proj_file then
+			open_command_in_new_tab(
+				("%s run --project %s"):format(vim.fn.shellescape(dotnet_bin), vim.fn.shellescape(proj_file)),
+				proj_dir
+			)
+		else
+			open_command_in_new_tab(
+				("%s run %s"):format(vim.fn.shellescape(dotnet_bin), vim.fn.shellescape(file_path)),
+				file_dir
+			)
+		end
 		return
 	end
 

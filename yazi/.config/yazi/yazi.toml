@@ -4,7 +4,7 @@ sort_by = "natural"
 sort_dir_first = true
 show_hidden = false
 show_symlink = true
-linemode = "git"
+linemode = "size"
 scrolloff = 8
 
 [preview]
@@ -21,15 +21,6 @@ prepend_preloaders = [
   { mime = "application/pdf", run = "pdf" },
 ]
 
-[[plugin.prepend_fetchers]]
-url   = "*"
-run   = "git"
-group = "git"
-
-[[plugin.prepend_fetchers]]
-url   = "*/"
-run   = "git"
-group = "git"
 
 [opener]
 edit = [

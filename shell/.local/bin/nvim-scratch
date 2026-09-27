@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# nvim-scratch: Mở nhanh Neovim buffer trống, tự động copy vào clipboard khi :wq
+# ==============================================================================
+
+set -euo pipefail
+
+export PATH="$HOME/.local/bin:$PATH"
+
+# Sinh tên file tạm đuôi .md nhưng chưa tạo file trên đĩa
+tmp_file="$(mktemp -u --suffix=.md -t scratch.XXXXXX)"
+
+cleanup() {
+  rm -f "$tmp_file"
+}
+trap cleanup EXIT INT TERM HUP
+
+copy_clipboard() {
+  if command -v wl-copy >/dev/null 2>&1; then
+    wl-copy < "$1"
+  elif command -v xclip >/dev/null 2>&1; then
+    xclip -selection clipboard < "$1"
+  elif command -v xsel >/dev/null 2>&1; then
+    xsel --clipboard --input < "$1"
+  fi
+}
+
+# Mở Neovim và lập tức vào chế độ gõ (Insert mode)
+nvim +startinsert "$tmp_file"
+
+# Nếu người dùng lưu file (:wq, :x hoặc ZZ) và file có nội dung
+if [ -f "$tmp_file" ] && [ -s "$tmp_file" ]; then
+  copy_clipboard "$tmp_file"
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -a "Neovim Scratchpad" -i edit-paste "Scratchpad" "Đã copy nội dung vào clipboard!"
+  fi
+fi

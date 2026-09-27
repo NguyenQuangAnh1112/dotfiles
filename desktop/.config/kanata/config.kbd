@@ -1,33 +1,48 @@
 (defcfg
   process-unmapped-keys yes
+  concurrent-tap-hold yes
+  log-layer-changes no
+  linux-continue-if-no-devs-found yes
 )
 
 (defalias
   nav (layer-while-held nav)
   cap (macro caps)
+  mwu (mwheel-up 80 120)
+  mwd (mwheel-down 80 120)
+  csp (macro C-spc)
+
+  ;; Khi giữ phím vật lý Caps Lock, phím Space sẽ gửi Right Alt + ` để đổi bộ gõ
+  ;; Sử dụng switch kiểm tra trực tiếp phím vật lý (input real caps):
+  ;; - Cô lập hoàn toàn giữa Caps Lock và layer Nav (dùng phím vật lý lctl)
+  ;; - Loại bỏ 100% hiện tượng race condition khi nhả phím của defoverrides
+  tg-ime (macro (unmod lctl) 5 RA-grv)
+  spc-base (switch
+    ((input real caps)) @tg-ime break
+    () spc break
+  )
 )
 
 (defsrc
   esc 1 2 3 4 5 6 7 8 9 0 - = bspc
   tab q w e r t y u i o p [ ]
   caps a s d f g h j k l ; ' ret
-  lalt spc ralt
   z x c v b n m , . /
+  lctl lalt spc ralt
 )
 
 (deflayer base
   _ _ _ _ _ _ _ _ _ _ _ _ _ _
   _ _ _ _ _ _ _ _ _ _ _ _ _
-  @nav _ _ _ _ _ _ _ _ _ _ _ _
-  lalt _ ralt
+  lctl _ _ _ _ _ _ _ _ _ _ _ _
   _ _ _ _ _ _ _ _ _ _
+  @nav lalt @spc-base ralt
 )
 
 (deflayer nav
-  _ f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 _
+  lrld f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 _
   _ _ _ ret _ _ _ esc home _ bspc _ _
   _ end _ del f11 _ left down up rght ret _ ret
-  lalt _ ralt
-  _ _ @cap _ _ [ { _ _ _
+  _ _ @cap _ _ [ { @mwu @mwd _
+  _ lalt @csp ralt
 )
-

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Công cụ cân màu màn hình (Monitor Calibration Tool)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: #1a1a1a; color: #e0e0e0; padding: 20px; line-height: 1.5; }
+    h1 { font-size: 22px; margin-bottom: 8px; text-align: center; }
+    p.desc { text-align: center; color: #aaa; margin-bottom: 24px; font-size: 14px; }
+    .nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+    .nav button {
+      background: #2d2d2d; color: #fff; border: 1px solid #444; padding: 8px 16px;
+      border-radius: 6px; cursor: pointer; font-size: 14px; transition: 0.2s;
+    }
+    .nav button:hover, .nav button.active { background: #0066cc; border-color: #3399ff; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    /* Box container */
+    .test-card {
+      background: #222; border-radius: 8px; padding: 20px; border: 1px solid #333;
+      max-width: 1000px; margin: 0 auto;
+    }
+    .test-header { margin-bottom: 16px; }
+    .test-header h2 { font-size: 18px; margin-bottom: 4px; color: #fff; }
+    .test-header p { font-size: 13px; color: #999; }
+
+    /* White saturation test */
+    .white-test-area {
+      background: #ffffff; padding: 30px; border-radius: 6px;
+      display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+    }
+    .white-box {
+      width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; color: #999; border-radius: 4px;
+    }
+
+    /* Black level test */
+    .black-test-area {
+      background: #000000; padding: 30px; border-radius: 6px;
+      display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+    }
+    .black-box {
+      width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; color: #666; border-radius: 4px;
+    }
+
+    /* Split screen compare */
+    .full-white-area {
+      background: #ffffff; height: 350px; border-radius: 6px; display: flex;
+      align-items: center; justify-content: center; color: #888; font-size: 16px;
+    }
+    .full-gray-area {
+      background: #808080; height: 350px; border-radius: 6px; display: flex;
+      align-items: center; justify-content: center; color: #fff; font-size: 16px;
+    }
+
+    /* Gradient test */
+    .gradient-ramp {
+      height: 90px; width: 100%; border-radius: 6px; margin: 15px 0;
+      background: linear-gradient(to right, #000000, #ffffff);
+    }
+    .rgb-gradient {
+      height: 35px; width: 100%; border-radius: 4px; margin-bottom: 8px;
+    }
+    .gradient-r { background: linear-gradient(to right, #000, #ff0000); }
+    .gradient-g { background: linear-gradient(to right, #000, #00ff00); }
+    .gradient-b { background: linear-gradient(to right, #000, #0000ff); }
+  </style>
+</head>
+<body>
+
+  <h1>Công Cụ Kiểm Tra & Cân Chỉnh Màu Màn Hình</h1>
+  <p class="desc">Kéo cửa sổ trình duyệt này nằm giữa 2 màn hình (laptop và màn rời) để so sánh trực quan.</p>
+
+  <div class="nav">
+    <button class="active" onclick="showTab('white-tab', this)">1. Kiểm tra Độ sáng & Trắng (Contrast/White)</button>
+    <button onclick="showTab('color-tab', this)">2. So sánh Trắng & Xám (Chỉnh R-G-B)</button>
+    <button onclick="showTab('black-tab', this)">3. Kiểm tra Vùng tối (Black Level)</button>
+    <button onclick="showTab('gradient-tab', this)">4. Dải chuyển màu (Gradient)</button>
+  </div>
+
+  <!-- TAB 1: White Saturation -->
+  <div id="white-tab" class="tab-content active">
+    <div class="test-card">
+      <div class="test-header">
+        <h2>Kiểm tra chi tiết vùng sáng (White Saturation)</h2>
+        <p><b>Cách xem:</b> Nền ngoài cùng là trắng tinh (255). Màn hình chuẩn phải nhìn thấy được ô <b>252 hoặc 253</b>. Nếu các ô từ 245 trở lên đều biến mất (trắng xóa), hãy <b>hạ Contrast</b> trên màn hình rời xuống vài nấc.</p>
+      </div>
+      <div class="white-test-area">
+        <div class="white-box" style="background: rgb(235,235,235);">235</div>
+        <div class="white-box" style="background: rgb(240,240,240);">240</div>
+        <div class="white-box" style="background: rgb(244,244,244);">244</div>
+        <div class="white-box" style="background: rgb(248,248,248);">248</div>
+        <div class="white-box" style="background: rgb(250,250,250);">250</div>
+        <div class="white-box" style="background: rgb(251,251,251);">251</div>
+        <div class="white-box" style="background: rgb(252,252,252);">252</div>
+        <div class="white-box" style="background: rgb(253,253,253);">253</div>
+        <div class="white-box" style="background: rgb(254,254,254);">254</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Compare White & Gray -->
+  <div id="color-tab" class="tab-content">
+    <div class="test-card">
+      <div class="test-header">
+        <h2>So sánh Trắng tinh & Xám trung tính (Chỉnh Red - Green - Blue)</h2>
+        <p><b>Cách làm:</b> Kéo nửa khung hình này sang màn laptop, nửa còn lại ở màn ngoài. Nhìn xem vùng màu bên màn ngoài ngả vàng/hồng hay xanh hơn laptop, sau đó vào OSD hạ màu tương ứng.</p>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div>
+          <div style="text-align: center; margin-bottom: 6px; font-size: 13px; color: #ccc;">Nền Trắng Tinh (#FFFFFF)</div>
+          <div class="full-white-area">Trắng chuẩn 100%</div>
+        </div>
+        <div>
+          <div style="text-align: center; margin-bottom: 6px; font-size: 13px; color: #ccc;">Xám Trung Tính (#808080)</div>
+          <div class="full-gray-area">Xám chuẩn 50%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Black Level -->
+  <div id="black-tab" class="tab-content">
+    <div class="test-card">
+      <div class="test-header">
+        <h2>Kiểm tra chi tiết vùng tối (Black Level)</h2>
+        <p><b>Cách xem:</b> Nền ngoài cùng là đen tuyệt đối (0). Màn hình tốt sẽ nhìn thấy ô số <b>2 hoặc 3</b> tách biệt nhẹ so với nền đen. Nếu từ ô 1 đến 8 đều đen sì như nhau, màn hình đang bị bệt vùng tối.</p>
+      </div>
+      <div class="black-test-area">
+        <div class="black-box" style="background: rgb(1,1,1);">1</div>
+        <div class="black-box" style="background: rgb(2,2,2);">2</div>
+        <div class="black-box" style="background: rgb(4,4,4);">4</div>
+        <div class="black-box" style="background: rgb(6,6,6);">6</div>
+        <div class="black-box" style="background: rgb(8,8,8);">8</div>
+        <div class="black-box" style="background: rgb(12,12,12);">12</div>
+        <div class="black-box" style="background: rgb(16,16,16);">16</div>
+        <div class="black-box" style="background: rgb(24,24,24);">24</div>
+        <div class="black-box" style="background: rgb(32,32,32);">32</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Gradients -->
+  <div id="gradient-tab" class="tab-content">
+    <div class="test-card">
+      <div class="test-header">
+        <h2>Kiểm tra dải chuyển màu mượt mà (Gradient Ramp)</h2>
+        <p>Dải màu từ đen sang trắng phải chuyển tiếp êm, không bị ngắt thành từng vệt sọc (banding) và không bị ám màu xanh/vàng cục bộ ở giữa dải.</p>
+      </div>
+      <div class="gradient-ramp"></div>
+      <div class="rgb-gradient gradient-r"></div>
+      <div class="rgb-gradient gradient-g"></div>
+      <div class="rgb-gradient gradient-b"></div>
+    </div>
+  </div>
+
+  <script>
+    function showTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav button').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>

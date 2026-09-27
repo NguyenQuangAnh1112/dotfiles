@@ -11,6 +11,8 @@ local hidden_extensions = {
 return {
   {
     "stevearc/oil.nvim",
+    lazy = false,
+    cmd = { "Oil" },
     dependencies = { "nvim-tree/nvim-web-devicons" },
     keys = {
       { "-", "<cmd>Oil<CR>", desc = "Open Oil (buffer)" },

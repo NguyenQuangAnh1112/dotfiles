@@ -1,0 +1,37 @@
+# ==============================================================================
+# Mako Notification Daemon Configuration
+# ==============================================================================
+
+# Auto-dismiss all notifications after 5 seconds
+default-timeout=5000
+
+# Layout
+max-visible=3
+sort=-time
+layer=overlay
+anchor=top-right
+margin=10
+padding=10,15
+
+# Appearance
+font=monospace 10
+width=300
+height=100
+border-size=2
+border-radius=8
+background-color=#1e1e2eee
+text-color=#cdd6f4
+border-color=#88507a
+
+# Urgency overrides
+[urgency=low]
+default-timeout=3000
+border-color=#403d52
+
+[urgency=high]
+default-timeout=8000
+border-color=#eb6f92
+
+[urgency=critical]
+default-timeout=0
+border-color=#eb6f92

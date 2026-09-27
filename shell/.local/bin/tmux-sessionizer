@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# tmux-sessionizer: Quản lý & nhảy nhanh giữa các Tmux Sessions / Projects bằng fzf
+# ==============================================================================
+
+set -euo pipefail
+
+if [[ $# -eq 1 ]]; then
+    selected="$1"
+else
+    # 1. Lấy danh sách session đang chạy
+    sessions=$(tmux list-sessions -F '#{session_name}' 2>/dev/null || true)
+    
+    # 2. Lấy danh sách các thư mục project
+    projects=$(find ~/dotfiles ~/dev ~/learn ~/Documents ~/hlt ~/yt -maxdepth 2 -not -path '*/.*' -type d 2>/dev/null || true)
+    
+    # 3. Kết hợp và chọn qua fzf
+    selected=$(printf "%s\n%s\n" "$sessions" "$projects" | sed '/^$/d' | sort -u | fzf \
+        --reverse \
+        --border=rounded \
+        --prompt="🚀 Session / Project > " \
+        --header="Enter: Chuyển/Tạo session | ESC: Thoát | ?: Xem trước" \
+        --preview='if [ -d {} ]; then ls -la {}; else tmux list-windows -t {} 2>/dev/null; fi' \
+        --preview-window=right:50%:hidden \
+        --bind='?:toggle-preview')
+fi
+
+if [[ -z "${selected:-}" ]]; then
+    exit 0
+fi
+
+# Nếu người dùng chọn một session đang tồn tại
+if tmux has-session -t="$selected" 2>/dev/null; then
+    if [[ -z "${TMUX:-}" ]]; then
+        tmux attach -t "$selected"
+    else
+        tmux switch-client -t "$selected"
+    fi
+    exit 0
+fi
+
+# Nếu người dùng chọn một đường dẫn thư mục
+if [[ -d "$selected" ]]; then
+    selected_name=$(basename "$selected" | tr . _)
+    
+    # Tạo session mới nếu chưa có
+    if ! tmux has-session -t="$selected_name" 2>/dev/null; then
+        tmux new-session -ds "$selected_name" -c "$selected"
+    fi
+    
+    if [[ -z "${TMUX:-}" ]]; then
+        tmux attach -t "$selected_name"
+    else
+        tmux switch-client -t "$selected_name"
+    fi
+    exit 0
+fi

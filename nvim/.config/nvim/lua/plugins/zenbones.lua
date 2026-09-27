@@ -5,38 +5,28 @@ return {
 		lazy = false,
 		priority = 1000,
 		init = function()
+			-- Bật trong suốt gốc của zenbones (cho Normal, SignColumn, LineNr, v.v.)
 			vim.g.zenbones = {
 				transparent_background = true,
 			}
 		end,
 		config = function()
-			vim.cmd("colorscheme zenbones")
+			-- Bổ sung trong suốt cho Float Window, Popup Menu và Status/Tabline
+			local float_and_ui_groups = {
+				"NormalFloat",
+				"FloatTitle",
+				"StatusLine",
+				"StatusLineNC",
+				"TabLine",
+				"TabLineFill",
+				"Pmenu",
+				"PmenuKind",
+				"PmenuExtra",
+				"PmenuSbar",
+			}
 
 			local function apply_transparency()
-				local transparent_groups = {
-					"Normal",
-					"NormalNC",
-					"NormalFloat",
-					"FloatBorder",
-					"FloatTitle",
-					"SignColumn",
-					"EndOfBuffer",
-					"TabLine",
-					"TabLineFill",
-					"TabLineSel",
-					"WinSeparator",
-					"LineNr",
-					"CursorLineNr",
-					"FoldColumn",
-					"Pmenu",
-					"PmenuKind",
-					"PmenuExtra",
-					"PmenuSbar",
-					"StatusLine",
-					"StatusLineNC",
-				}
-
-				for _, group in ipairs(transparent_groups) do
+				for _, group in ipairs(float_and_ui_groups) do
 					local hl = vim.api.nvim_get_hl(0, { name = group, link = false })
 					hl.bg = "NONE"
 					hl.ctermbg = "NONE"
@@ -44,12 +34,13 @@ return {
 				end
 			end
 
-			apply_transparency()
-
+			-- Đăng ký hook ColorScheme để chạy đúng 1 lần khi theme tải, không bị ghi đè
 			vim.api.nvim_create_autocmd("ColorScheme", {
 				pattern = "*bones*",
 				callback = apply_transparency,
 			})
+
+			vim.cmd("colorscheme zenbones")
 		end,
 	},
 }

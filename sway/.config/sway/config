@@ -25,7 +25,7 @@ client.unfocused        #26233a #191724 #6e6a86 #26233a   #191724
 client.urgent           #eb6f92 #eb6f92 #ffffff #eb6f92   #eb6f92
 
 ### Output & Wallpaper
-output * bg /home/muggle/Pictures/bg/japan-artistic-3840x2160-25406.jpg fill
+output * bg ~/.cache/current_wallpaper fill #191724
 
 # Màn phụ (màn rời 27" 2K 100Hz) bên trái
 output HDMI-A-5 {
@@ -33,6 +33,7 @@ output HDMI-A-5 {
     pos 0 0
     subpixel rgb
     adaptive_sync off
+    # max_render_time 7
 }
 
 # Màn chính (Laptop 15.6" FHD 144Hz) bên phải (căn đáy bằng với màn phụ: 1440 - 1080 = 360)
@@ -41,14 +42,19 @@ output eDP-1 {
     pos 2560 360
     subpixel rgb
     adaptive_sync off
+    # max_render_time 4
 }
 
 ### Input configuration
 input "type:touchpad" {
-    dwt disabled
+    dwt enabled
     tap enabled
+    drag enabled
+    click_method clickfinger
     natural_scroll enabled
     middle_emulation enabled
+    accel_profile "adaptive"
+    pointer_accel 0.2
 }
 
 input "type:pointer" {
@@ -60,11 +66,26 @@ input "type:keyboard" {
     xkb_layout "us"
 }
 
-### Idle & Screen Lock (Disabled)
+### Touchpad Gestures
+bindgesture swipe:3:right workspace prev_on_output
+bindgesture swipe:3:left workspace next_on_output
+bindgesture swipe:3:up fullscreen toggle
+bindgesture swipe:3:down floating toggle
+bindgesture swipe:4:up exec $menu
+
+### Idle & Screen Lock (Disabled - Option 5: manual lock/power only)
 # exec swayidle -w \
 #     timeout 300 'swaylock -f -c 000000' \
 #     timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
-#     before-sleep 'swaylock -f -c 000000'
+#     before-sleep 'swaylock -f -c 000000' \
+#     after-resume 'swaymsg "output * power on"'
+
+### Laptop Lid Switch
+# Gập nắp máy: Tự động khóa màn hình và Suspend (tắt luôn cả màn hình rời)
+bindswitch --locked lid:on exec systemctl suspend
+
+# Mở nắp máy: Đảm bảo màn hình bật sáng lại ngay lập tức
+bindswitch --locked lid:off exec swaymsg "output * power on"
 
 ### Cursor Theme
 seat * xcursor_theme Bibata-Modern-Ice 28
@@ -72,10 +93,11 @@ exec ~/.config/sway/scripts/ensure-bibata-cursor.sh
 
 ### Autostart
 exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway XCURSOR_THEME XCURSOR_SIZE && systemctl --user start sway-session.target
-exec_always sh -c 'command -v fcitx5 >/dev/null 2>&1 && fcitx5 -d'
 exec_always sh -c 'command -v mako >/dev/null 2>&1 && mako'
+exec sh -c 'command -v fcitx5 >/dev/null 2>&1 && fcitx5 -d'
 exec ~/.config/i3/start-polkit-agent.sh
 exec easyeffects --hide-window --service-mode
+exec ~/.config/sway/scripts/wallpaper-switcher.sh --init
 
 ### Application Shortcuts
 bindsym $mod+Return exec $term
@@ -84,8 +106,12 @@ bindsym $mod+d exec $menu
 bindsym Mod1+space exec $menu
 bindsym $mod+f exec firefox
 bindsym $mod+e exec nautilus
+bindsym $mod+w exec ~/.config/sway/scripts/wallpaper-switcher.sh
 bindsym $mod+u exec ~/.config/i3/unity-launch.sh
-bindsym $mod+q kill
+bindsym $mod+Shift+q kill
+
+# Stochos (Keyboard mouse control - Toggle bằng Right Alt + `)
+bindsym --no-repeat Mod1+grave exec pkill -x stochos || ~/.cargo/bin/stochos
 
 # Screenshot to clipboard (Select area)
 bindsym $mod+Shift+s exec grim -g "$(slurp)" - | wl-copy && notify-send "Screenshot" "Đã lưu ảnh chụp vùng chọn vào clipboard"

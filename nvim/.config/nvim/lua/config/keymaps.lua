@@ -1,7 +1,5 @@
 local keymap = vim.keymap.set
 
-local diagnostics_float_win
-
 local function replace_in_selection()
 	local start_pos = vim.api.nvim_buf_get_mark(0, "<")
 	local end_pos = vim.api.nvim_buf_get_mark(0, ">")
@@ -27,33 +25,6 @@ local function replace_in_selection()
 	local find_escaped = vim.fn.escape(find, [[\/]])
 	local replace_escaped = vim.fn.escape(replace, [[\/&]])
 	vim.cmd(([[silent %d,%ds/\V%s/%s/g]]):format(line_start, line_end, find_escaped, replace_escaped))
-end
-
-local function show_line_diagnostics(line)
-	if diagnostics_float_win and vim.api.nvim_win_is_valid(diagnostics_float_win) then
-		if vim.api.nvim_get_current_win() ~= diagnostics_float_win then
-			vim.api.nvim_set_current_win(diagnostics_float_win)
-		end
-		return
-	end
-
-	line = line or (vim.api.nvim_win_get_cursor(0)[1] - 1)
-	local diagnostics = vim.diagnostic.get(0, { lnum = line })
-
-	if vim.tbl_isempty(diagnostics) then
-		vim.notify("No diagnostics on current line", vim.log.levels.INFO)
-		return
-	end
-
-	local _, winid = vim.diagnostic.open_float(0, {
-		scope = "line",
-		border = "rounded",
-		focusable = true,
-		source = "always",
-		close_events = { "CursorMoved", "CursorMovedI", "InsertEnter", "BufHidden" },
-	})
-
-	diagnostics_float_win = winid
 end
 
 local function toggle_markdown_checkbox()
@@ -115,15 +86,180 @@ keymap("n", "<C-y>", "<C-y>k", { desc = "Scroll up and move cursor up" })
 keymap("n", "<leader>w", "<cmd>w<CR>", { desc = "Save file" })
 keymap("n", "<leader>q", "<cmd>q<CR>", { desc = "Quit window" })
 keymap("n", "<leader>Q", "<cmd>qa!<CR>", { desc = "Quit all (force)" })
-keymap("n", "<leader>e", show_line_diagnostics, { desc = "Show line diagnostics" })
+keymap("n", "<leader>e", function()
+	vim.diagnostic.open_float({ border = "rounded", scope = "line" })
+end, { desc = "Show line diagnostics" })
 keymap("n", "<leader>tn", "<cmd>tabnew<CR>", { desc = "Open new tab" })
 keymap("n", "<leader>tc", "<cmd>tabclose<CR>", { desc = "Close current tab" })
 keymap("x", "<leader>rv", replace_in_selection, { desc = "Replace in selection" })
+
+-- Visual mode enhancements
+keymap("x", "J", ":m '>+1<CR>gv=gv", { desc = "Move selected lines down" })
+keymap("x", "K", ":m '<-2<CR>gv=gv", { desc = "Move selected lines up" })
+keymap("x", "<", "<gv", { desc = "Indent left and keep selection" })
+keymap("x", ">", ">gv", { desc = "Indent right and keep selection" })
+keymap("x", "p", [["_dP]], { desc = "Paste over without overwriting register" })
+
+keymap("n", "<leader>u", function()
+	pcall(vim.cmd.packadd, "nvim.undotree")
+	local ok, undotree = pcall(require, "undotree")
+	if ok then
+		undotree.open()
+	else
+		vim.cmd("Undotree")
+	end
+end, { desc = "Toggle UndoTree" })
+
+-- LSP Diagnostic navigation (Nhảy giữa các lỗi đỏ/vàng trong file code)
+keymap("n", "]d", function() vim.diagnostic.jump({ count = 1, float = true }) end, { desc = "Next diagnostic" })
+keymap("n", "[d", function() vim.diagnostic.jump({ count = -1, float = true }) end, { desc = "Previous diagnostic" })
+keymap("n", "]e", function() vim.diagnostic.jump({ count = 1, severity = vim.diagnostic.severity.ERROR, float = true }) end, { desc = "Next error" })
+keymap("n", "[e", function() vim.diagnostic.jump({ count = -1, severity = vim.diagnostic.severity.ERROR, float = true }) end, { desc = "Previous error" })
+
+-- Quickfix list navigation & toggle (An toàn, tự quay vòng, thông báo nếu rỗng)
+local function qf_next()
+	local qf = vim.fn.getqflist()
+	if #qf == 0 then
+		vim.notify("Quickfix list đang trống (nếu muốn nhảy lỗi code trong file, hãy dùng ]d / [d)", vim.log.levels.WARN)
+		return
+	end
+	local ok = pcall(vim.cmd, "cnext")
+	if not ok then
+		pcall(vim.cmd, "cfirst")
+	end
+	vim.cmd("normal! zz")
+end
+
+local function qf_prev()
+	local qf = vim.fn.getqflist()
+	if #qf == 0 then
+		vim.notify("Quickfix list đang trống (nếu muốn nhảy lỗi code trong file, hãy dùng ]d / [d)", vim.log.levels.WARN)
+		return
+	end
+	local ok = pcall(vim.cmd, "cprev")
+	if not ok then
+		pcall(vim.cmd, "clast")
+	end
+	vim.cmd("normal! zz")
+end
+
+local function toggle_quickfix()
+	local qf_open = false
+	for _, win in ipairs(vim.fn.getwininfo()) do
+		if win.quickfix == 1 then
+			qf_open = true
+			break
+		end
+	end
+	if qf_open then
+		vim.cmd("cclose")
+	else
+		local qf = vim.fn.getqflist()
+		if #qf == 0 then
+			vim.notify("Quickfix list đang trống", vim.log.levels.INFO)
+		end
+		vim.cmd("botright copen 10")
+	end
+end
+
+keymap("n", "]q", qf_next, { desc = "Next quickfix item" })
+keymap("n", "[q", qf_prev, { desc = "Previous quickfix item" })
+keymap("n", "<leader>co", toggle_quickfix, { desc = "Toggle Quickfix window" })
+
+-- Toggle LSP Inlay Hints (Persistent & Global)
+if vim.lsp.inlay_hint then
+	local state_file = vim.fs.joinpath(vim.fn.stdpath("state"), "inlay_hint")
+
+	local function get_saved_state()
+		local f = io.open(state_file, "r")
+		if not f then
+			return false
+		end
+		local content = f:read("*a")
+		f:close()
+		return vim.trim(content) == "1"
+	end
+
+	local function save_state(enabled)
+		local dir = vim.fs.dirname(state_file)
+		if vim.fn.isdirectory(dir) == 0 then
+			vim.fn.mkdir(dir, "p")
+		end
+		local f = io.open(state_file, "w")
+		if f then
+			f:write(enabled and "1" or "0")
+			f:close()
+		end
+	end
+
+	local function set_inlay_hint(enabled)
+		vim.lsp.inlay_hint.enable(enabled)
+		save_state(enabled)
+		vim.notify("Inlay hints: " .. (enabled and "ON" or "OFF"), vim.log.levels.INFO)
+	end
+
+	vim.lsp.inlay_hint.enable(get_saved_state())
+
+	keymap("n", "<leader>th", function()
+		set_inlay_hint(not vim.lsp.inlay_hint.is_enabled())
+	end, { desc = "Toggle LSP Inlay Hints (Global & Persistent)" })
+
+	vim.api.nvim_create_user_command("InlayHints", function(opts)
+		local arg = vim.trim(opts.args):lower()
+		if arg == "on" or arg == "enable" then
+			set_inlay_hint(true)
+		elseif arg == "off" or arg == "disable" then
+			set_inlay_hint(false)
+		elseif arg == "toggle" or arg == "" then
+			set_inlay_hint(not vim.lsp.inlay_hint.is_enabled())
+		else
+			vim.notify("Usage: :InlayHints [on|off|toggle]", vim.log.levels.WARN)
+		end
+	end, {
+		nargs = "?",
+		complete = function()
+			return { "on", "off", "toggle" }
+		end,
+		desc = "Set or toggle LSP Inlay Hints (global & persistent)",
+	})
+end
+
 
 keymap("n", "<leader>sv", "<cmd>vsplit<CR><cmd>Oil<CR>", { desc = "Vsplit and open Oil" })
 keymap("n", "<leader>sh", "<cmd>split<CR>", { desc = "Split horizontally" })
 keymap("n", "<leader>\\", "<cmd>vsplit<CR><cmd>terminal<CR>", { desc = "Vsplit and open terminal" })
 keymap("n", "<leader>rr", function() require("config.runner").run() end, { desc = "Run file or project in new tab" })
+
+local function open_lazygit()
+	local buf = vim.api.nvim_create_buf(false, true)
+	local width = math.floor(vim.o.columns * 0.9)
+	local height = math.floor(vim.o.lines * 0.9)
+	local row = math.floor((vim.o.lines - height) / 2)
+	local col = math.floor((vim.o.columns - width) / 2)
+
+	local win = vim.api.nvim_open_win(buf, true, {
+		relative = "editor",
+		row = row,
+		col = col,
+		width = width,
+		height = height,
+		style = "minimal",
+		border = "rounded",
+	})
+
+	vim.fn.termopen("lazygit", {
+		on_exit = function()
+			if vim.api.nvim_win_is_valid(win) then
+				vim.api.nvim_win_close(win, true)
+			end
+			if vim.api.nvim_buf_is_valid(buf) then
+				vim.api.nvim_buf_delete(buf, { force = true })
+			end
+		end,
+	})
+	vim.cmd("startinsert")
+end
+keymap("n", "<leader>gg", open_lazygit, { desc = "Open LazyGit" })
 
 keymap("t", "<Esc>", "<C-\\><C-n>", { desc = "Terminal normal mode" })
 

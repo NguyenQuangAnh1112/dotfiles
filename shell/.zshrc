@@ -1,140 +1,160 @@
-########################
+################################################################################
+# ENVIRONMENT & PATH CONFIGURATION
+################################################################################
+
+# Tự động loại bỏ trùng lặp trong PATH và fpath
+typeset -U path PATH fpath FPATH cdpath CDPATH
+
+path=(
+  "$HOME/.local/bin"
+  "$HOME/.cargo/bin"
+  "$HOME/.npm-global/bin"
+  "$HOME/.dotnet"
+  "$HOME/.local/opt/go/bin"
+  "$HOME/go/bin"
+  "$HOME/.config/emacs/bin"
+  "$HOME/.opencode/bin"
+  /usr/local/cuda-13.2/bin
+  $path
+)
+
+export EDITOR=nvim
+export DOTNET_ROOT="$HOME/.dotnet"
+
+# CUDA
+export CUDA_HOME=/usr/local/cuda-13.2
+[ -d "$CUDA_HOME/lib64" ] && export LD_LIBRARY_PATH="$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# Vietnamese Input Method (fcitx)
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
+
+# Bat Theme
+export BAT_THEME="Zenbones"
+
+# fnm (Fast Node Manager)
+if [ -d "$HOME/.local/share/fnm" ]; then
+  path=("$HOME/.local/share/fnm" $path)
+  eval "$(fnm env --shell zsh)"
+fi
+
+# envman
+[ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
+
+################################################################################
 # OH MY ZSH
-########################
+################################################################################
 
 if [[ -d "$HOME/.oh-my-zsh" ]]; then
   export ZSH="$HOME/.oh-my-zsh"
-
   ZSH_THEME="robbyrussell"
 
-  plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+  # Hiệu năng: Tắt kiểm tra cập nhật định kỳ khi mở shell
+  DISABLE_AUTO_UPDATE="true"
 
+  # Hiệu năng: Không quét untracked files trong Git để prompt phản hồi tức thì
+  DISABLE_UNTRACKED_FILES_DIRTY="true"
+
+  # Màu gợi ý autosuggestions
+  ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#6e6a86"
+
+  plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
   source "$ZSH/oh-my-zsh.sh"
 fi
 
-########################
-# HISTORY
-########################
+################################################################################
+# HISTORY & SHELL OPTIONS
+################################################################################
 
-HISTSIZE=5000
-SAVEHIST=5000
+HISTSIZE=10000
+SAVEHIST=10000
 HISTFILE=~/.zsh_history
 
 setopt appendhistory
 setopt sharehistory
 setopt hist_ignore_dups
 setopt hist_ignore_space
-
-########################
-# OPTIONS
-########################
+setopt hist_reduce_blanks
 
 setopt AUTO_CD
 setopt AUTO_PUSHD
 setopt PUSHD_IGNORE_DUPS
 
-########################
-# COMPLETION
-########################
-
-if [[ -o interactive ]]; then
-  if [ -d ~/.zsh/zsh-completions/src ]; then
-    fpath=(~/.zsh/zsh-completions/src $fpath)
-  fi
-  autoload -Uz compinit && compinit
-fi
-
-########################
-# EDITOR
-########################
-
-export EDITOR=nvim
-
-########################
-# PATH
-########################
-
-[ -d "$HOME/.local/bin" ] && export PATH="$HOME/.local/bin:$PATH"
-[ -d "$HOME/.npm-global/bin" ] && export PATH="$HOME/.npm-global/bin:$PATH"
-[ -d "$HOME/.dotnet" ] && export PATH="$HOME/.dotnet:$PATH"
-export DOTNET_ROOT="$HOME/.dotnet"
-
-########################
-# ALIASES
-########################
+################################################################################
+# INTERACTIVE FEATURES
+################################################################################
 
 if [[ -o interactive ]]; then
 
+  # Tìm kiếm lịch sử bằng mũi tên Lên/Xuống theo tiền tố lệnh (Native, 0ms)
+  autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+  zle -N up-line-or-beginning-search
+  zle -N down-line-or-beginning-search
+  bindkey '^[[A' up-line-or-beginning-search
+  bindkey '^[[B' down-line-or-beginning-search
+  bindkey -e
+
+  # Zoxide (cd thông minh)
+  eval "$(zoxide init zsh)"
+
+  # Aliases
   alias cd="z"
-
   alias cat='bat --paging=never'
-
   alias v='nvim'
   alias 'v.'='nvim -c Oil'
-
   alias e="exit"
-
   alias cls="clear"
-
-  alias nta="tmux attach -t"
-
   alias ntm='tmux new-session -s'
-
   alias off="sudo systemctl poweroff"
-
   alias reboot="sudo systemctl reboot"
-
   alias vspeaker='pactl list short sinks | grep -q virtual_speaker || pactl load-module module-null-sink sink_name=virtual_speaker sink_properties=device.description=VirtualSpeaker'
+  alias fetch='fastfetch'
 
-  alias gpush='rclone sync /home/muggle/hlt/obsidian gdrive:obsidian \
-    --exclude ".obsidian/cache/**" \
-    --exclude ".trash/**" \
-    --progress'
+  # fff.nvim (Fast File Finder)
+  function ff() {
+    if [ -n "$1" ] && [ -d "$1" ]; then
+      nvim -c "lua require('fff').find_files_in_dir('$1')"
+    else
+      nvim -c "lua require('fff').find_files()"
+    fi
+  }
 
-  alias gpull='rclone sync gdrive:obsidian /home/muggle/hlt/obsidian \
-    --exclude ".obsidian/cache/**" \
-    --exclude ".trash/**" \
-    --progress'
+  function fg() {
+    nvim -c "lua require('fff').live_grep()"
+  }
 
-  alias resetgg='rm -rf ~/.config/google-chrome/Singleton*'
+  # Yazi
+  alias y="command yazi"
+  function yz() {
+    local tmp cwd
+    tmp="$(mktemp -t yazi-cwd.XXXXXX)"
+    command yazi --cwd-file="$tmp" "$@"
+    if cwd="$(command cat "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+      builtin cd -- "$cwd"
+    fi
+    rm -f -- "$tmp"
+  }
 
-  alias cardon='sudo nvidia-smi -pm 1'
+  # Antigravity & Tmux shortcuts
+  alias agyp="agy-preview"
+  alias agyl="agy-preview"
+  alias tsb="tmux-scrollback"
 
-  alias cardoff='sudo nvidia-smi -pm 0'
+  tmux-popup-close-widget() {
+    [[ -n "$TMUX" ]] || return
+    zle -I
+    tmux display-popup -C >/dev/null 2>&1
+    zle reset-prompt
+  }
+  zle -N tmux-popup-close-widget
+  bindkey '^[t' tmux-popup-close-widget
 
-  alias ud='sudo dnf update'
-
-  alias ff='fastfetch'
-
-fi
-
-########################
-# ZOXIDE
-########################
-
-if [[ -o interactive ]]; then
-  eval "$(zoxide init zsh)"
-fi
-
-########################
-# HISTORY SEARCH
-########################
-
-if [[ -o interactive ]] && [ -f ~/.zsh/zsh-history-substring-search/zsh-history-substring-search.zsh ]; then
-  source ~/.zsh/zsh-history-substring-search/zsh-history-substring-search.zsh
-  bindkey '^[[A' history-substring-search-up
-  bindkey '^[[B' history-substring-search-down
-fi
-
-########################
-# FZF
-########################
-
-if [[ -o interactive ]]; then
+  # FZF
   [ -f /usr/share/fzf/shell/key-bindings.zsh ] && source /usr/share/fzf/shell/key-bindings.zsh
   [ -f /usr/share/fzf/shell/completion.zsh ] && source /usr/share/fzf/shell/completion.zsh
 
-  export FZF_FD_COMMON_OPTS='--hidden --follow --strip-cwd-prefix --exclude .git --exclude .cache --exclude node_modules --exclude .npm --exclude .venv --exclude __pycache__'
+  export FZF_FD_COMMON_OPTS='--no-ignore --hidden --follow --strip-cwd-prefix --exclude .git --exclude .cache --exclude node_modules --exclude .npm --exclude .venv --exclude __pycache__ --exclude Library --exclude Temp --exclude obj'
   export FZF_DEFAULT_COMMAND="fd ${FZF_FD_COMMON_OPTS} --type f ."
   export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
   export FZF_ALT_C_COMMAND="fd ${FZF_FD_COMMON_OPTS} --type d ."
@@ -155,13 +175,10 @@ if [[ -o interactive ]]; then
 
   ft() {
     local choice session
-
-    choice=$(tmux list-sessions -F '#{session_name}	#{session_windows} windows	#{session_path}' 2>/dev/null | \
+    choice=$(tmux list-sessions -F '#{session_name}	#{session_windows}	#{session_path}' 2>/dev/null | \
       fzf --delimiter=$'\t' --with-nth=1,2,3 --prompt='tmux sessions> ') || return
-
     session=${choice%%$'\t'*}
     [[ -n "$session" ]] || return
-
     if [[ -n "$TMUX" ]]; then
       tmux switch-client -t "$session"
     else
@@ -175,115 +192,17 @@ if [[ -o interactive ]]; then
     builtin cd -- "$dir"
   }
 
-fi
-
-########################
-# KEYBINDINGS
-########################
-
-if [[ -o interactive ]]; then
-  bindkey -e
-
-  tmux-popup-close-widget() {
-    [[ -n "$TMUX" ]] || return
-
-    zle -I
-    tmux display-popup -C >/dev/null 2>&1
-    zle reset-prompt
-  }
-
-  zle -N tmux-popup-close-widget
-  bindkey '^[t' tmux-popup-close-widget
-fi
-
-########################
-# ENV (CUDA + RUST)
-########################
-
-export CUDA_HOME=/usr/local/cuda-13.2
-[ -d "$CUDA_HOME/bin" ] && export PATH="$CUDA_HOME/bin:$PATH"
-[ -d "$CUDA_HOME/lib64" ] && export LD_LIBRARY_PATH="$CUDA_HOME/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-
-[ -d "$HOME/.cargo/bin" ] && export PATH="$HOME/.cargo/bin:$PATH"
-
-########################
-# OPENCODE
-########################
-
-[ -d "$HOME/.opencode/bin" ] && export PATH="$HOME/.opencode/bin:$PATH"
-
-
-########################
-# YAZI
-########################
-
-# y: mở yazi thông thường
-alias y="command yazi"
-
-# yz: mở yazi và cd theo thư mục khi thoát
-function yz() {
-  local tmp cwd
-  tmp="$(mktemp -t yazi-cwd.XXXXXX)"
-  command yazi --cwd-file="$tmp" "$@"
-  if cwd="$(command cat "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-    builtin cd -- "$cwd"
+  # Fedora Update Reminder
+  if command -v fedora-update-check &>/dev/null; then
+    fedora-update-check
   fi
-  rm -f -- "$tmp"
-}
 
-########################
-# AGY (ANTIGRAVITY)
-########################
+  # Tắt delay khi gõ sai lệnh của PackageKit
+  unfunction command_not_found_handler 2>/dev/null || true
 
-alias agyp="agy-preview"
-alias agyl="agy-preview"
-
-########################
-# INPUT METHOD (VIETNAMESE)
-########################
-
-export GTK_IM_MODULE=fcitx
-export QT_IM_MODULE=fcitx
-export XMODIFIERS=@im=fcitx
-
-########################
-# SETTINGS
-########################
-
-DISABLE_AUTO_UPDATE="true"
-
-export BAT_THEME="Zenbones"
-
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#6e6a86"
-
-# fnm
-FNM_PATH="/home/muggle/.local/share/fnm"
-if [ -d "$FNM_PATH" ]; then
-  export PATH="$FNM_PATH:$PATH"
-  eval "$(fnm env --shell zsh)"
 fi
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-export PATH="$HOME/.config/emacs/bin:$PATH"
-
-# Generated for envman. Do not edit.
-[ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
-
-export PATH=$PATH:$HOME/.local/opt/go/bin
-export PATH=$PATH:$HOME/go/bin
-export PATH=$HOME/.npm-global/bin:$PATH
-export PATH="$HOME/.cargo/bin:$PATH"
-
-
-# Added by Antigravity CLI installer
-export PATH="/home/muggle/.local/bin:$PATH"
-
-########################
-# FEDORA UPDATE REMINDER
-########################
-
-if [[ -o interactive ]] && command -v fedora-update-check &>/dev/null; then
-  fedora-update-check
+# Tự động biên dịch ngầm ~/.zshrc sang bytecode nếu có thay đổi
+if [[ -s "$HOME/.zshrc" && (! -s "$HOME/.zshrc.zwc" || "$HOME/.zshrc" -nt "$HOME/.zshrc.zwc") ]]; then
+  zcompile "$HOME/.zshrc" &>/dev/null &!
 fi

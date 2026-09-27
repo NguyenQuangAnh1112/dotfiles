@@ -2,6 +2,7 @@ return {
   {
     "saghen/blink.cmp",
     version = "v0.*",
+    event = { "InsertEnter", "CmdlineEnter" },
     opts = {
       keymap = {
         preset = "default",
@@ -10,7 +11,6 @@ return {
         ["<Down>"] = { "select_next", "fallback" },
       },
       appearance = {
-        nerd_font_variant = "mono",
         use_nvim_cmp_as_default = true,
       },
       completion = {
@@ -43,12 +43,6 @@ return {
           treesitter_highlighting = true,
           window = { border = "rounded" },
         },
-        ghost_text = {
-          enabled = false,
-        },
-      },
-      signature = {
-        enabled = false,
       },
       sources = {
         default = { "lsp", "snippets", "buffer", "path" },
@@ -91,11 +85,6 @@ return {
           end
           return {}
         end,
-        completion = {
-          ghost_text = {
-            enabled = false,
-          },
-        },
       },
     },
     opts_extend = { "sources.default" },
