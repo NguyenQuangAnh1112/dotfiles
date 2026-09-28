@@ -103,15 +103,14 @@ exec ~/.config/sway/scripts/wallpaper-switcher.sh --init
 bindsym $mod+Return exec $term
 bindsym $mod+Shift+Return exec ghostty
 bindsym $mod+d exec $menu
-bindsym Mod1+space exec $menu
 bindsym $mod+f exec firefox
 bindsym $mod+e exec nautilus
 bindsym $mod+w exec ~/.config/sway/scripts/wallpaper-switcher.sh
 bindsym $mod+u exec ~/.config/i3/unity-launch.sh
 bindsym $mod+Shift+q kill
 
-# Stochos (Keyboard mouse control - Toggle bằng Right Alt + `)
-bindsym --no-repeat Mod1+grave exec pkill -x stochos || ~/.cargo/bin/stochos
+# Stochos (Keyboard mouse control - Toggle bằng Alt + Space)
+bindsym --no-repeat Mod1+space exec pkill -x stochos || ~/.cargo/bin/stochos
 
 # Screenshot to clipboard (Select area)
 bindsym $mod+Shift+s exec grim -g "$(slurp)" - | wl-copy && notify-send "Screenshot" "Đã lưu ảnh chụp vùng chọn vào clipboard"

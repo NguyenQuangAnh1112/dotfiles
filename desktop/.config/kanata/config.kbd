@@ -3,6 +3,9 @@
   concurrent-tap-hold yes
   log-layer-changes no
   linux-continue-if-no-devs-found yes
+  linux-dev-names-exclude (
+    "Lotus-Uinput-Server"
+  )
 )
 
 (defalias
