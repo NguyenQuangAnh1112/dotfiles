@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+import os
+import re
+import sys
+import math
+import subprocess
+
+CACHE_DIR = os.path.expanduser("~/.cache")
+HISTORY_FILE = os.path.join(CACHE_DIR, "rofi-calc-history.txt")
+ROFI_THEME = os.path.expanduser("~/.config/rofi/calc.rasi")
+MAX_HISTORY = 20
+
+CLEAR_LABEL = "🗑 Clear calculation history"
+
+math_env = {k: v for k, v in math.__dict__.items() if not k.startswith("_")}
+math_env.update({"abs": abs, "round": round, "min": min, "max": max})
+
+
+def eval_math(expr: str) -> str:
+    clean = expr.strip()
+    clean = clean.replace("^", "**").replace("×", "*").replace("÷", "/")
+    clean = re.sub(r"(\d+(?:\.\d+)?)%", r"(\1/100)", clean)
+    res = eval(clean, {"__builtins__": None}, math_env)
+    if isinstance(res, (int, float)):
+        if isinstance(res, float) and res.is_integer():
+            return str(int(res))
+        if isinstance(res, float):
+            return f"{res:.8g}"
+    return str(res)
+
+
+def load_history():
+    if not os.path.isfile(HISTORY_FILE):
+        return []
+    with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
+
+
+def save_history(history):
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        for item in history[:MAX_HISTORY]:
+            f.write(f"{item}\n")
+
+
+def copy_and_notify(result_str: str, expression: str = None):
+    # Copy to clipboard
+    subprocess.run(["wl-copy", result_str], check=False)
+    # Send desktop notification
+    if expression and expression != result_str:
+        body = f"{expression} = {result_str}\n(Đã sao chép vào clipboard)"
+    else:
+        body = f"Kết quả: {result_str}\n(Đã sao chép vào clipboard)"
+    subprocess.run(
+        ["notify-send", "-i", "accessories-calculator", "Calculator", body],
+        check=False,
+    )
+
+
+def main():
+    history = load_history()
+
+    menu_entries = list(history)
+    if menu_entries:
+        menu_entries.append(CLEAR_LABEL)
+
+    input_text = "\n".join(menu_entries)
+    rofi_cmd = [
+        "rofi",
+        "-config",
+        ROFI_THEME,
+        "-dmenu",
+        "-p",
+        "🖩 Calc",
+    ]
+
+    proc = subprocess.run(
+        rofi_cmd,
+        input=input_text,
+        text=True,
+        capture_output=True,
+    )
+
+    if proc.returncode != 0:
+        sys.exit(0)
+
+    choice = proc.stdout.strip()
+    if not choice:
+        sys.exit(0)
+
+    # 1. Clear history chosen
+    if choice == CLEAR_LABEL:
+        if os.path.isfile(HISTORY_FILE):
+            os.remove(HISTORY_FILE)
+        subprocess.run(
+            ["notify-send", "-i", "accessories-calculator", "Calculator", "Đã xóa lịch sử tính toán"],
+            check=False,
+        )
+        sys.exit(0)
+
+    # 2. Re-selecting an existing history entry
+    # Format: "RESULT   (= EXPR)"
+    if "   (= " in choice:
+        result_part = choice.split("   (= ")[0].strip()
+        copy_and_notify(result_part)
+        sys.exit(0)
+
+    # 3. New expression evaluation
+    try:
+        result = eval_math(choice)
+        new_entry = f"{result}   (= {choice})"
+
+        # Update history
+        if new_entry in history:
+            history.remove(new_entry)
+        history.insert(0, new_entry)
+        save_history(history)
+
+        copy_and_notify(result, choice)
+    except Exception as e:
+        subprocess.run(
+            [
+                "notify-send",
+                "-u",
+                "low",
+                "-i",
+                "dialog-error",
+                "Calculator",
+                f"Lỗi tính toán: {choice}",
+            ],
+            check=False,
+        )
+
+
+if __name__ == "__main__":
+    main()

@@ -18,11 +18,22 @@ prepend_keymap = [
   { on = "O", run = "open --hovered", desc = "Open hovered file" },
   { on = "o", run = "open --interactive", desc = "Open with..." },
 
-  { on = [ "g", "c" ], run = "cd ~/.config", desc = "Go config" },
+  # Copy path / filename to clipboard
+  { on = "Y", run = "copy path", desc = "Copy absolute path" },
+  { on = [ "y", "p" ], run = "copy path", desc = "Copy absolute path" },
+  { on = [ "y", "d" ], run = "copy dirname", desc = "Copy directory path" },
+  { on = [ "y", "f" ], run = "copy filename", desc = "Copy filename" },
+  { on = [ "c", "c" ], run = "copy path", desc = "Copy absolute path" },
+  { on = [ "c", "d" ], run = "copy dirname", desc = "Copy directory path" },
+  { on = [ "c", "f" ], run = "copy filename", desc = "Copy filename" },
+  { on = [ "c", "n" ], run = "copy name_without_ext", desc = "Copy filename without extension" },
+
+  # Bookmarks
   { on = [ "g", "d" ], run = "cd ~/Downloads", desc = "Go downloads" },
-  { on = [ "g", "o" ], run = "cd /home/muggle/hlt/obsidian/Para", desc = "Go Obsidian Para" },
-  { on = [ "g", "p" ], run = "cd /home/muggle/hlt/py/my-project", desc = "Go my project" },
+  { on = [ "g", "o" ], run = "cd /home/muggle/learn", desc = "Go learn" },
   { on = [ "g", "h" ], run = "cd /home/muggle/hlt", desc = "Go hlt" },
+  { on = [ "g", "." ], run = "cd ~/dotfiles", desc = "Go dotfiles" },
+  { on = [ "g", "~" ], run = "cd ~", desc = "Go home" },
 
   { on = [ ",", "m" ], run = "sort mtime", desc = "Sort by mtime" },
   { on = [ ",", "n" ], run = "sort natural", desc = "Sort naturally" },
@@ -32,5 +43,5 @@ prepend_keymap = [
   { on = [ ",", "r" ], run = "plugin save-ratio", desc = "Save current layout ratio" },
   { on = [ "c", "m" ], run = "plugin chmod", desc = "Chmod selected files" },
   { on = "E", run = 'shell --block "$EDITOR \"$@\""', desc = "Edit selected with $EDITOR" },
-  { on = "T", run = 'shell --confirm "kitty --detach --directory \"$PWD\""', desc = "Open terminal here" },
+  { on = "T", run = 'shell --confirm "if [ -n \\"$TMUX\\" ]; then tmux new-window -c \\"$PWD\\"; else kitty --detach --directory \\"$PWD\\"; fi"', desc = "Open terminal here" },
 ]

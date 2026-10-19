@@ -24,7 +24,7 @@ external_output() {
 external=$(external_output || true)
 
 if command -v swaymsg >/dev/null 2>&1 && [ -n "${SWAYSOCK:-}" ]; then
-    swaymsg "focus output HDMI-A-5; workspace number 6:0" >/dev/null 2>&1 || true
+    swaymsg "workspace number 6:F1" >/dev/null 2>&1 || true
 elif command -v i3-msg >/dev/null 2>&1; then
     i3-msg "workspace number $workspace" >/dev/null
     if [ -n "$external" ]; then

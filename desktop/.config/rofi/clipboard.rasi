@@ -1,0 +1,17 @@
+@import "~/.config/rofi/config.rasi"
+
+* {
+    font: "JetBrainsMono Nerd Font 16";
+}
+
+inputbar {
+    enabled: false;
+}
+
+#window {
+    width: 700px;
+}
+
+#listview {
+    lines: 6;
+}

@@ -5,7 +5,7 @@
 ### Variables
 set $mod Mod4
 set $term kitty
-set $menu sh -c 'command -v rofi >/dev/null 2>&1 && exec rofi -show drun -show-icons || exec wofi --show drun --insensitive --prompt "Search..."'
+set $menu sh -c 'command -v rofi >/dev/null 2>&1 && exec rofi -show drun-frecency -show-icons || exec wofi --show drun --insensitive --prompt "Search..."'
 
 ### Appearance
 font pango:monospace 10
@@ -27,7 +27,7 @@ client.urgent           #eb6f92 #eb6f92 #ffffff #eb6f92   #eb6f92
 ### Output & Wallpaper
 output * bg ~/.cache/current_wallpaper fill #191724
 
-# Màn phụ (màn rời 27" 2K 100Hz) bên trái
+# Màn phụ (màn rời 27" 2K 100Hz) ở trên
 output HDMI-A-5 {
     mode 2560x1440@100Hz
     pos 0 0
@@ -36,10 +36,10 @@ output HDMI-A-5 {
     # max_render_time 7
 }
 
-# Màn chính (Laptop 15.6" FHD 144Hz) bên phải (căn đáy bằng với màn phụ: 1440 - 1080 = 360)
+# Màn chính (Laptop 15.6" FHD 144Hz) ở dưới (căn giữa theo chiều ngang: (2560 - 1920) / 2 = 320, y = 1440)
 output eDP-1 {
     mode 1920x1080@144Hz
-    pos 2560 360
+    pos 320 1440
     subpixel rgb
     adaptive_sync off
     # max_render_time 4
@@ -98,11 +98,18 @@ exec sh -c 'command -v fcitx5 >/dev/null 2>&1 && fcitx5 -d'
 exec ~/.config/i3/start-polkit-agent.sh
 exec easyeffects --hide-window --service-mode
 exec ~/.config/sway/scripts/wallpaper-switcher.sh --init
+exec_always ~/.config/sway/scripts/unity-workspace-watcher.sh
+exec sh -c 'command -v cliphist >/dev/null 2>&1 && wl-paste --type text --watch cliphist store'
+exec sh -c 'command -v cliphist >/dev/null 2>&1 && wl-paste --type image --watch cliphist store'
 
 ### Application Shortcuts
 bindsym $mod+Return exec $term
 bindsym $mod+Shift+Return exec ghostty
 bindsym $mod+d exec $menu
+bindsym $mod+v exec ~/.config/rofi/clipboard-menu
+bindsym $mod+c exec ~/.config/rofi/calc-menu
+bindsym $mod+t exec ~/.config/rofi/translate-menu
+bindsym $mod+Shift+t exec ~/.config/rofi/translate-menu --instant
 bindsym $mod+f exec firefox
 bindsym $mod+e exec nautilus
 bindsym $mod+w exec ~/.config/sway/scripts/wallpaper-switcher.sh
@@ -157,37 +164,37 @@ set $wsF3 "8:F3"
 set $wsF4 "9:F4"
 set $wsF5 "10:F5"
 
-# Gán workspace cho màn hình tương ứng
-workspace $ws1 output eDP-1
-workspace $ws2 output eDP-1
-workspace $ws3 output eDP-1
-workspace $ws4 output eDP-1
-workspace $ws5 output eDP-1
+# Gán workspace cho màn hình tương ứng (hỗ trợ fallback khi rút màn rời)
+workspace $ws1 output eDP-1 HDMI-A-5
+workspace $ws2 output eDP-1 HDMI-A-5
+workspace $ws3 output eDP-1 HDMI-A-5
+workspace $ws4 output eDP-1 HDMI-A-5
+workspace $ws5 output eDP-1 HDMI-A-5
 
-workspace $wsF1 output HDMI-A-5
-workspace $wsF2 output HDMI-A-5
-workspace $wsF3 output HDMI-A-5
-workspace $wsF4 output HDMI-A-5
-workspace $wsF5 output HDMI-A-5
+workspace $wsF1 output HDMI-A-5 eDP-1
+workspace $wsF2 output HDMI-A-5 eDP-1
+workspace $wsF3 output HDMI-A-5 eDP-1
+workspace $wsF4 output HDMI-A-5 eDP-1
+workspace $wsF5 output HDMI-A-5 eDP-1
 
-# Switch workspace (focus về màn hình tương ứng)
-# Màn chính (eDP-1): 1-5
-bindsym $mod+1 focus output eDP-1; workspace number $ws1
-bindsym $mod+2 focus output eDP-1; workspace number $ws2
-bindsym $mod+3 focus output eDP-1; workspace number $ws3
-bindsym $mod+4 focus output eDP-1; workspace number $ws4
-bindsym $mod+5 focus output eDP-1; workspace number $ws5
+# Switch workspace
+# Màn chính: 1-5
+bindsym $mod+1 workspace number $ws1
+bindsym $mod+2 workspace number $ws2
+bindsym $mod+3 workspace number $ws3
+bindsym $mod+4 workspace number $ws4
+bindsym $mod+5 workspace number $ws5
 
-# Màn rời (HDMI-A-5): F1-F5
-bindsym $mod+F1 focus output HDMI-A-5; workspace number $wsF1
-bindsym $mod+F2 focus output HDMI-A-5; workspace number $wsF2
-bindsym $mod+F3 focus output HDMI-A-5; workspace number $wsF3
-bindsym $mod+F4 focus output HDMI-A-5; workspace number $wsF4
-bindsym $mod+F5 focus output HDMI-A-5; workspace number $wsF5
+# Màn rời / phụ: F1-F5
+bindsym $mod+F1 workspace number $wsF1
+bindsym $mod+F2 workspace number $wsF2
+bindsym $mod+F3 workspace number $wsF3
+bindsym $mod+F4 workspace number $wsF4
+bindsym $mod+F5 workspace number $wsF5
 
-# Chuyển focus giữa 2 màn hình
-bindsym $mod+Tab focus output right
-bindsym $mod+Shift+Tab focus output left
+# Chuyển focus giữa 2 màn hình (trên / dưới)
+bindsym $mod+Tab focus output down
+bindsym $mod+Shift+Tab focus output up
 
 # Move container to workspace
 bindsym $mod+Shift+1 move container to workspace number $ws1
@@ -238,8 +245,8 @@ bindsym $mod+Left exec brightnessctl set 10%-
 assign [class="^(?i)unityhub$"] workspace number $wsF1
 assign [app_id="^(?i)unityhub$"] workspace number $wsF1
 
-# Unity Editor → workspace F1
-assign [class="^Unity\.bin$"] workspace number $wsF1
+# Unity Editor → workspace F2 (nếu có màn rời) hoặc 2 (nếu chỉ có màn laptop)
+include ~/.config/sway/unity.conf
 
 # --- Inverted float logic ---
 # 1) Float ALL Unity.bin windows by default (popups, dialogs, sub-windows)

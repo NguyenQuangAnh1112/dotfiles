@@ -1,7 +1,7 @@
 return {
   {
     "williamboman/mason.nvim",
-    cmd = { "Mason", "MasonInstall", "MasonUpdate", "MasonLog", "MasonUninstall" },
+    lazy = false,
     opts = {
       registries = {
         "github:mason-org/mason-registry",
@@ -45,6 +45,7 @@ return {
     "neovim/nvim-lspconfig",
     event = { "BufReadPre", "BufNewFile" },
     dependencies = {
+      "williamboman/mason.nvim",
       "saghen/blink.cmp",
     },
     config = function()

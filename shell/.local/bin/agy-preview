@@ -4,6 +4,22 @@ import glob
 import json
 import sys
 import subprocess
+import urllib.parse
+import time
+
+def notify(title, message, urgency="normal"):
+    if subprocess.run(["which", "notify-send"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        subprocess.run(["notify-send", "-a", "agy-preview", "-u", urgency, title, message])
+
+def error_exit(msg):
+    print(f"[agy-preview] {msg}", file=sys.stderr)
+    notify("agy-preview", msg, urgency="critical")
+    if sys.stdin.isatty():
+        try:
+            input("\nNhấn Enter để đóng...")
+        except Exception:
+            pass
+    sys.exit(1)
 
 def extract_latest_response():
     brain_dir = os.path.expanduser("~/.gemini/antigravity-cli/brain")
@@ -12,39 +28,35 @@ def extract_latest_response():
         transcripts = glob.glob(f"{brain_dir}/*/.system_generated/logs/transcript.jsonl")
 
     if not transcripts:
-        print("[agy-preview] Không tìm thấy phiên làm việc nào của agy!", file=sys.stderr)
-        try:
-            if sys.stdin.isatty():
-                input("\nNhấn Enter để đóng...")
-        except Exception:
-            pass
-        sys.exit(1)
+        error_exit("Không tìm thấy phiên làm việc nào của agy!")
 
-    latest_file = max(transcripts, key=os.path.getmtime)
+    # Sắp xếp các transcript theo thời gian sửa đổi mới nhất
+    sorted_transcripts = sorted(transcripts, key=os.path.getmtime, reverse=True)
 
     last_content = None
-    with open(latest_file, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                d = json.loads(line)
-                if d.get("source") == "MODEL" and d.get("type") == "PLANNER_RESPONSE":
-                    content = d.get("content")
-                    if content and isinstance(content, str) and content.strip():
-                        last_content = content
-            except Exception:
-                pass
+    for t_file in sorted_transcripts:
+        try:
+            with open(t_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        d = json.loads(line)
+                        if d.get("source") == "MODEL" and d.get("type") == "PLANNER_RESPONSE":
+                            content = d.get("content")
+                            if content and isinstance(content, str) and content.strip():
+                                last_content = content
+                    except Exception:
+                        pass
+        except Exception:
+            continue
+
+        if last_content:
+            break
 
     if not last_content:
-        print("[agy-preview] Chưa tìm thấy câu trả lời nào từ agy trong phiên gần nhất!", file=sys.stderr)
-        try:
-            if sys.stdin.isatty():
-                input("\nNhấn Enter để đóng...")
-        except Exception:
-            pass
-        sys.exit(1)
+        error_exit("Chưa tìm thấy câu trả lời nào từ agy trong các phiên gần đây!")
 
     out_dir = os.path.expanduser("~/.cache/agy")
     os.makedirs(out_dir, exist_ok=True)
@@ -53,36 +65,145 @@ def extract_latest_response():
     with open(out_file, "w", encoding="utf-8") as f:
         f.write(last_content)
 
-    return out_file
+    return out_file, last_content
+
+def get_obsidian_vault_path():
+    obsidian_config_path = os.path.expanduser("~/.config/obsidian/obsidian.json")
+    if os.path.exists(obsidian_config_path):
+        try:
+            with open(obsidian_config_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            vaults = data.get("vaults", {})
+            # Tìm vault đang mở (open: true)
+            for vault_id, vinfo in vaults.items():
+                if vinfo.get("open") is True:
+                    path = vinfo.get("path")
+                    if path and os.path.isdir(path):
+                        return path
+            # Tìm vault mở gần nhất theo timestamp 'ts'
+            sorted_vaults = sorted(vaults.values(), key=lambda v: v.get("ts", 0), reverse=True)
+            for vinfo in sorted_vaults:
+                path = vinfo.get("path")
+                if path and os.path.isdir(path):
+                    return path
+        except Exception:
+            pass
+
+    fallbacks = [
+        os.path.expanduser("~/learn"),
+        os.path.expanduser("~/Documents/Obsidian Vault"),
+        os.path.expanduser("~/vault"),
+    ]
+    for p in fallbacks:
+        if os.path.isdir(p):
+            return p
+    return None
+
+def get_obsidian_target_file(vault_path):
+    subdirs = [
+        os.path.join(vault_path, "knowledge", "99_tmp"),
+        os.path.join(vault_path, "99_tmp"),
+        os.path.join(vault_path, "tmp"),
+        vault_path,
+    ]
+    for d in subdirs:
+        if os.path.isdir(d):
+            return os.path.join(d, "agy_last_reply.md")
+
+    if os.path.isdir(os.path.join(vault_path, "knowledge")):
+        target_dir = os.path.join(vault_path, "knowledge", "99_tmp")
+    else:
+        target_dir = os.path.join(vault_path, "tmp")
+    os.makedirs(target_dir, exist_ok=True)
+    return os.path.join(target_dir, "agy_last_reply.md")
+
+def focus_obsidian():
+    # Wayland / Sway
+    if os.environ.get("SWAYSOCK") or subprocess.run(["which", "swaymsg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        for _ in range(5):
+            res = subprocess.run(["swaymsg", '[app_id="md.obsidian.Obsidian"] focus'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if res.returncode == 0:
+                break
+            time.sleep(0.3)
+    # X11 / i3
+    elif os.environ.get("I3SOCK") or subprocess.run(["which", "i3-msg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        for _ in range(5):
+            res = subprocess.run(["i3-msg", '[class="(?i)obsidian"] focus'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if res.returncode == 0:
+                break
+            time.sleep(0.3)
+
+def open_in_obsidian(last_content, pane_type="tab"):
+    vault_path = get_obsidian_vault_path()
+    if not vault_path:
+        error_exit("Không tìm thấy Obsidian vault nào để lưu file tạm!")
+
+    target_file = get_obsidian_target_file(vault_path)
+    os.makedirs(os.path.dirname(target_file), exist_ok=True)
+    with open(target_file, "w", encoding="utf-8") as f:
+        f.write(last_content)
+
+    # Dùng paneType=tab để mở thành tab mới thay vì ghi đè lên tab hiện tại
+    uri = f"obsidian://open?path={urllib.parse.quote(os.path.abspath(target_file), safe='/:')}&paneType={pane_type}"
+
+    opener = "obsidian" if subprocess.run(["which", "obsidian"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0 else "xdg-open"
+
+    try:
+        subprocess.Popen(
+            [opener, uri],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception as e:
+        error_exit(f"Không thể mở Obsidian: {e}")
+
+    time.sleep(0.1)
+    focus_obsidian()
 
 def main():
     args = sys.argv[1:]
     
     if "--help" in args or "-h" in args:
         print("Sử dụng: agy-preview [tùy chọn]")
-        print("Trích xuất câu trả lời mới nhất của agy và mở xem bằng Neovim.")
+        print("Trích xuất câu trả lời mới nhất của agy và mở xem bằng Obsidian hoặc Neovim.")
         print()
         print("Tùy chọn:")
+        print("  -o, --obsidian        Mở bằng Obsidian (mặc định nếu có môi trường đồ họa)")
+        print("  -n, --nvim            Mở bằng Neovim trong terminal")
         print("  -b, --browser         Mở bằng Neovim và kích hoạt MarkdownPreview trên trình duyệt")
-        print("  -e, --extract-only    Chỉ trích xuất ra file, không mở Neovim")
+        print("  -e, --extract-only    Chỉ trích xuất ra file, không mở ứng dụng")
         print("  -c, --cat             In trực tiếp nội dung Markdown ra màn hình")
         print("  -h, --help            Hiển thị trợ giúp này")
         return
 
-    out_file = extract_latest_response()
+    out_file, last_content = extract_latest_response()
 
     if "--extract-only" in args or "-e" in args:
         print(out_file)
         return
 
     if "--cat" in args or "-c" in args:
-        with open(out_file, "r", encoding="utf-8") as f:
-            sys.stdout.write(f.read())
+        sys.stdout.write(last_content)
         return
 
-    # Mở Neovim (render-markdown.nvim sẽ tự động render Markdown)
     if "--browser" in args or "-b" in args:
         os.execvp("nvim", ["nvim", "-c", "MarkdownPreview", out_file])
+
+    if "--nvim" in args or "-n" in args:
+        os.execvp("nvim", ["nvim", out_file])
+
+    has_gui = bool(os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY"))
+    obsidian_avail = subprocess.run(["which", "obsidian"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+    pane_type = "tab"
+    if "--split" in args:
+        pane_type = "split"
+    elif "--window" in args:
+        pane_type = "window"
+
+    if "--obsidian" in args or "-o" in args or (has_gui and obsidian_avail):
+        open_in_obsidian(last_content, pane_type=pane_type)
     else:
         os.execvp("nvim", ["nvim", out_file])
 

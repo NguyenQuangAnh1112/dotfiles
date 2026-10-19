@@ -9,43 +9,40 @@
 )
 
 (defalias
-  nav (layer-while-held nav)
-  cap (macro caps)
-  mwu (mwheel-up 80 120)
-  mwd (mwheel-down 80 120)
-  csp (macro C-spc)
-
-  ;; Khi giữ phím vật lý Caps Lock, phím Space sẽ gửi Right Alt + ` để đổi bộ gõ
-  ;; Sử dụng switch kiểm tra trực tiếp phím vật lý (input real caps):
-  ;; - Cô lập hoàn toàn giữa Caps Lock và layer Nav (dùng phím vật lý lctl)
-  ;; - Loại bỏ 100% hiện tượng race condition khi nhả phím của defoverrides
-  tg-ime (macro (unmod lctl) 5 RA-grv)
-  spc-base (switch
-    ((input real caps)) @tg-ime break
-    () spc break
-  )
+  nav  (layer-while-held nav)
+  ;; Chạm nhẹ Caps = Esc, giữ Caps = Left Ctrl
+  ecl  (tap-hold-press 200 200 A-spc lctl)
+  
+  ;; Cuộn chuột dọc & ngang
+  mwu  (mwheel-up 80 120)
+  mwd  (mwheel-down 80 120)
+  
+  ;; Điều hướng nâng cao (nhảy từ, xóa từ)
+  cl C-left
+  cr C-rght
+  cbk C-bspc
 )
 
 (defsrc
-  esc 1 2 3 4 5 6 7 8 9 0 - = bspc
-  tab q w e r t y u i o p [ ]
-  caps a s d f g h j k l ; ' ret
-  z x c v b n m , . /
-  lctl lalt spc ralt
+  esc  1    2    3    4    5    6    7    8    9    0    -    =    bspc
+  tab  q    w    e    r    t    y    u    i    o    p    [    ]
+  caps a    s    d    f    g    h    j    k    l    ;    '    ret
+  z    x    c    v    b    n    m    ,    .    /
+  lctl lalt spc  ralt
 )
 
 (deflayer base
-  _ _ _ _ _ _ _ _ _ _ _ _ _ _
-  _ _ _ _ _ _ _ _ _ _ _ _ _
-  lctl _ _ _ _ _ _ _ _ _ _ _ _
-  _ _ _ _ _ _ _ _ _ _
-  @nav lalt @spc-base ralt
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _
+  @ecl _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _
+  @nav _    _    _
 )
 
 (deflayer nav
-  lrld f1 f2 f3 f4 f5 f6 f7 f8 f9 f10 f11 f12 _
-  _ _ _ ret _ _ _ esc home _ bspc _ _
-  _ end _ del f11 _ left down up rght ret _ ret
-  _ _ @cap _ _ [ { @mwu @mwd _
-  _ lalt @csp ralt
+  lrld f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12  _
+  _    _    _    ret  _    _    _    esc  home _    bspc @cbk _
+  _    end  _    del  f11  _    left down up   rght  ret  _   _
+  _    _    caps _    _    _    @cl  @mwu @mwd @cr
+  _    _    A-grv _
 )

@@ -5,13 +5,14 @@ return {
 		lazy = false,
 		priority = 1000,
 		init = function()
-			-- Bật trong suốt gốc của zenbones (cho Normal, SignColumn, LineNr, v.v.)
 			vim.g.zenbones = {
 				transparent_background = true,
 			}
+
+			-- vim.o.background = "dark"
+			-- vim.o.background = "light"
 		end,
 		config = function()
-			-- Bổ sung trong suốt cho Float Window, Popup Menu và Status/Tabline
 			local float_and_ui_groups = {
 				"NormalFloat",
 				"FloatTitle",

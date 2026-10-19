@@ -110,6 +110,10 @@ if [[ -o interactive ]]; then
   alias reboot="sudo systemctl reboot"
   alias vspeaker='pactl list short sinks | grep -q virtual_speaker || pactl load-module module-null-sink sink_name=virtual_speaker sink_properties=device.description=VirtualSpeaker'
   alias fetch='fastfetch'
+  alias agy="agy --dangerously-skip-permissions"
+  alias ga="git add"
+  alias gc="git commit -m"
+  alias gp="git push -u origin main"
 
   # fff.nvim (Fast File Finder)
   function ff() {
@@ -139,6 +143,8 @@ if [[ -o interactive ]]; then
   # Antigravity & Tmux shortcuts
   alias agyp="agy-preview"
   alias agyl="agy-preview"
+  alias agyo="agy-preview --obsidian"
+  alias agyn="agy-preview --nvim"
   alias tsb="tmux-scrollback"
 
   tmux-popup-close-widget() {
@@ -200,9 +206,16 @@ if [[ -o interactive ]]; then
   # Tắt delay khi gõ sai lệnh của PackageKit
   unfunction command_not_found_handler 2>/dev/null || true
 
+  # Smart China Proxy (ishoutu.cn / aim)
+  alias cnvpn="source ~/.local/bin/cnvpn"
+  alias cnvpnoff="source ~/.local/bin/cnvpnoff"
+
 fi
 
 # Tự động biên dịch ngầm ~/.zshrc sang bytecode nếu có thay đổi
 if [[ -s "$HOME/.zshrc" && (! -s "$HOME/.zshrc.zwc" || "$HOME/.zshrc" -nt "$HOME/.zshrc.zwc") ]]; then
   zcompile "$HOME/.zshrc" &>/dev/null &!
 fi
+
+# Unity CLI
+case ":${PATH}:" in *:"$HOME/.local/bin":*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac

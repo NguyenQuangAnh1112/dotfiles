@@ -21,6 +21,7 @@ class AppEntry:
     name: str
     exec_cmd: str
     icon: str
+    terminal: bool = False
 
 
 def read_state() -> dict:
@@ -40,11 +41,12 @@ def write_state(state: dict) -> None:
         json.dump(state, f)
 
 
-def parse_desktop_file(path: Path) -> tuple[str, str, str] | None:
+def parse_desktop_file(path: Path) -> tuple[str, str, str, bool] | None:
     name = ""
     localized_name = ""
     exec_cmd = ""
     icon = ""
+    terminal = False
     in_entry = False
 
     try:
@@ -80,11 +82,13 @@ def parse_desktop_file(path: Path) -> tuple[str, str, str] | None:
             exec_cmd = v
         elif k == "Icon":
             icon = v
+        elif k == "Terminal" and v.lower() == "true":
+            terminal = True
 
     final_name = name or localized_name
     if not final_name or not exec_cmd:
         return None
-    return final_name, exec_cmd, icon
+    return final_name, exec_cmd, icon, terminal
 
 
 def desktop_key(path: Path) -> str:
@@ -110,12 +114,12 @@ def load_apps() -> list[AppEntry]:
             parsed = parse_desktop_file(p)
             if not parsed:
                 continue
-            name, exec_cmd, icon = parsed
+            name, exec_cmd, icon, terminal = parsed
             dedupe_key = (name, exec_cmd)
             if dedupe_key in seen:
                 continue
             seen.add(dedupe_key)
-            entries.append(AppEntry(key=desktop_key(p), name=name, exec_cmd=exec_cmd, icon=icon))
+            entries.append(AppEntry(key=desktop_key(p), name=name, exec_cmd=exec_cmd, icon=icon, terminal=terminal))
 
     return entries
 
@@ -148,8 +152,7 @@ def show_menu() -> None:
 
     apps.sort(key=lambda a: (-score_for(a.key, state, now), a.name.lower()))
 
-    print("\0prompt\x1fApplications")
-    print("\0message\x1fSorted by usage + recency")
+    print("\0prompt\x1fApps")
     for app in apps:
         if app.icon:
             print(f"{app.name}{chr(0)}icon\x1f{app.icon}\x1finfo\x1f{app.key}")
@@ -166,6 +169,10 @@ def launch_selected(key: str) -> None:
     cmd = clean_exec(app.exec_cmd)
     if not cmd:
         return
+
+    if app.terminal:
+        term = os.environ.get("TERMINAL", "kitty")
+        cmd = [term, "-e"] + cmd
 
     try:
         subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
